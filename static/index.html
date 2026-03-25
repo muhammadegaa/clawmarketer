@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ClawMarketer — AI Marketing Agent</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%236366f1'/><path d='M12 9 Q9 15 8 22 M16 8 Q16 15 16 23 M20 9 Q23 15 24 22' stroke='white' stroke-width='2.6' stroke-linecap='round' fill='none'/></svg>" />
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -229,56 +230,74 @@
     /* Empty state */
     .empty-state { text-align: center; padding: 56px 24px; }
     .empty-icon { font-size: 32px; margin-bottom: 14px; filter: grayscale(1); opacity: .4; }
+    /* ── Splash screen ───────────────────────────────────── */
+    #splash {
+      position: fixed; inset: 0; z-index: 10000;
+      background: var(--bg);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+    }
+    #splash .splash-icon {
+      animation: splashIconIn .5s cubic-bezier(.22,1,.36,1) both;
+    }
+    #splash .splash-text {
+      font-size: 22px; font-weight: 700; color: var(--text); letter-spacing: -.3px;
+      animation: splashTextIn .5s .2s cubic-bezier(.22,1,.36,1) both;
+    }
+    #splash .splash-sub {
+      font-size: 13px; color: var(--sub);
+      animation: splashTextIn .5s .35s cubic-bezier(.22,1,.36,1) both;
+    }
+    #splash.splash-out { animation: splashFadeOut .4s .1s ease forwards; }
+    @keyframes splashIconIn  { from { opacity:0; transform: scale(.75); } to { opacity:1; transform: scale(1); } }
+    @keyframes splashTextIn  { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
+    @keyframes splashFadeOut { from { opacity:1; } to { opacity:0; pointer-events:none; } }
+
     /* ── Mobile ─────────────────────────────────────────── */
     @media (max-width: 639px) {
-      /* Nav: top row logo+avatar, bottom row tabs */
+      /* Nav: logo+signout top row, tabs second row */
       #topnav {
-        padding: 0; height: auto;
-        flex-direction: column; align-items: stretch; gap: 0;
+        height: auto; padding: 0;
+        flex-wrap: wrap; align-items: center; gap: 0;
       }
-      .nav-top-row {
-        display: flex; align-items: center; justify-content: space-between;
-        padding: 10px 16px; height: 50px;
-      }
-      .nav-tabs {
-        display: flex; align-items: center; gap: 0;
-        border-top: 1px solid var(--border);
-        margin: 0;
-      }
-      .nav-tab {
-        flex: 1; text-align: center; padding: 8px 4px;
+      .nav-logo  { order: 1; flex: 1; padding: 11px 16px; }
+      .nav-right { order: 2; padding: 8px 12px; gap: 6px; }
+      .nav-tabs  { order: 3; width: 100%; margin: 0; border-top: 1px solid var(--border); }
+      .nav-tab   {
+        flex: 1; text-align: center; padding: 8px 2px;
         font-size: 11px; border-radius: 0;
         border-right: 1px solid var(--border);
       }
       .nav-tab:last-child { border-right: none; }
       .nav-user-name { display: none; }
-      .nav-right { gap: 6px; }
-      /* Push content below taller mobile nav (logo row ~50px + tabs row ~33px) */
-      #page-app { padding-top: 86px; }
+      /* Two-row nav is ~88px tall */
+      #page-app { padding-top: 88px; }
       .app-content { padding: 20px 14px; }
       .stats-grid { grid-template-columns: repeat(2,1fr) !important; gap: 10px; }
       .dash-two-col { grid-template-columns: 1fr !important; }
       .signin-card { padding: 36px 22px; }
       .wizard-card { padding: 0 4px; }
-      /* Runs table: hide run id column, truncate skill */
       .runs-table th:nth-child(1),
       .runs-table td:nth-child(1) { display: none; }
       .runs-table th:nth-child(2),
-      .runs-table td:nth-child(2) { max-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      /* Integrations: single column */
+      .runs-table td:nth-child(2) { max-width: 130px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       #integrations-list .int-grid { grid-template-columns: 1fr 1fr !important; }
-      /* Setup guide modal: full width */
       #modal-setup-guide > div { padding: 20px 16px; }
-      /* Checklist actions: stack */
-      #checklist-items > div { flex-wrap: wrap; }
-    }
-    /* Desktop: nav-top-row is invisible (flex items sit in normal flow) */
-    @media (min-width: 640px) {
-      .nav-top-row { display: contents; }
     }
   </style>
 </head>
 <body>
+
+<!-- ─── Splash screen ─── -->
+<div id="splash">
+  <div class="splash-icon">
+    <svg width="64" height="64" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="32" height="32" rx="8" fill="#6366f1"/>
+      <path d="M12 9 Q9 15 8 22 M16 8 Q16 15 16 23 M20 9 Q23 15 24 22" stroke="white" stroke-width="2.6" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <div class="splash-text">ClawMarketer</div>
+  <div class="splash-sub">AI Marketing Agent</div>
+</div>
 
 <!-- ─── Toast container ─── -->
 <div id="toast-container"></div>
@@ -289,7 +308,10 @@
 <div id="page-signin" class="hidden">
   <div class="card signin-card">
     <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px;">
-      <div class="nav-logo-icon" style="width:36px;height:36px;border-radius:9px;font-size:17px;">C</div>
+      <svg width="36" height="36" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="32" height="32" rx="8" fill="#6366f1"/>
+        <path d="M12 9 Q9 15 8 22 M16 8 Q16 15 16 23 M20 9 Q23 15 24 22" stroke="white" stroke-width="2.6" stroke-linecap="round"/>
+      </svg>
       <span style="font-size:20px;font-weight:700;color:var(--text);">ClawMarketer</span>
     </div>
     <p style="color:var(--sub);font-size:14px;margin-bottom:36px;line-height:1.5;">
@@ -427,22 +449,23 @@
 
   <!-- Top Nav -->
   <nav id="topnav">
-    <div class="nav-top-row">
-      <a href="#" class="nav-logo">
-        <div class="nav-logo-icon">C</div>
-        ClawMarketer
-      </a>
-      <div class="nav-right">
-        <span class="nav-user-name" id="nav-user-name"></span>
-        <img id="nav-avatar" class="nav-avatar hidden" src="" alt="avatar" />
-        <button class="btn btn-ghost btn-sm" onclick="signOutUser()">Sign out</button>
-      </div>
-    </div>
+    <a href="#" class="nav-logo">
+      <svg width="26" height="26" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
+        <rect width="32" height="32" rx="7" fill="#6366f1"/>
+        <path d="M12 9 Q9 15 8 22 M16 8 Q16 15 16 23 M20 9 Q23 15 24 22" stroke="white" stroke-width="2.6" stroke-linecap="round"/>
+      </svg>
+      ClawMarketer
+    </a>
     <div class="nav-tabs">
       <div class="nav-tab active" data-tab="dashboard" onclick="switchTab('dashboard')">Dashboard</div>
       <div class="nav-tab" data-tab="agents" onclick="switchTab('agents')">Agents</div>
       <div class="nav-tab" data-tab="runs" onclick="switchTab('runs')">Runs</div>
       <div class="nav-tab" data-tab="integrations" onclick="switchTab('integrations')">Integrations</div>
+    </div>
+    <div class="nav-right">
+      <span class="nav-user-name" id="nav-user-name"></span>
+      <img id="nav-avatar" class="nav-avatar hidden" src="" alt="avatar" />
+      <button class="btn btn-ghost btn-sm" onclick="signOutUser()">Sign out</button>
     </div>
   </nav>
 
@@ -631,6 +654,19 @@
 </div>
 
 <script type="module">
+// ─────────────────────────────────────────────
+// Splash screen
+// ─────────────────────────────────────────────
+(function() {
+  const splash = document.getElementById('splash');
+  if (!splash) return;
+  // Dismiss after 1.6s — add fade-out class, then hide
+  setTimeout(() => {
+    splash.classList.add('splash-out');
+    setTimeout(() => { splash.style.display = 'none'; }, 500);
+  }, 1600);
+})();
+
 // ─────────────────────────────────────────────
 // Imports
 // ─────────────────────────────────────────────
