@@ -241,50 +241,66 @@ User says: "clean my data", "clean data in ~/reports", "analyze my files"
       <!-- Ready -->
       <div id="state-ready" class="hidden">
         <div class="card p-5 mb-4">
-          <div class="flex items-center gap-2 mb-4">
+          <div class="flex items-center gap-2 mb-3">
             <div class="w-2 h-2 rounded-full" style="background:var(--green)"></div>
             <span class="text-sm font-medium" style="color:var(--green)">Ready — Meta Ads connected</span>
           </div>
-          <p class="text-sm mb-4" style="color:var(--sub)">Download your pre-filled config and place it in your home directory:</p>
-          <button onclick="downloadConfig()" class="btn btn-primary text-sm mb-4">
+          <p class="text-sm mb-4" style="color:var(--sub)">Download your pre-filled config file — it has your user ID and Meta token already in it.</p>
+          <button onclick="downloadConfig()" class="btn btn-primary text-sm">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Download clawmarketer.env
           </button>
-          <div class="code-block text-xs">mv ~/Downloads/clawmarketer.env ~/clawmarketer.env<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
         </div>
 
-        <div class="card-sm p-4 mb-4">
-          <p class="text-xs font-medium mb-2" style="color:var(--sub)">Add your data directory path (for the data cleansing skill):</p>
-          <div class="code-block text-xs">echo "DATA_DIR=~/Documents/data" >> ~/clawmarketer.env<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <!-- AI Agent Setup Prompt -->
+        <div class="card p-5 mb-4" style="border-color:rgba(99,102,241,.3)">
+          <p class="text-sm font-semibold mb-1">Let an AI agent set everything up for you</p>
+          <p class="text-xs mb-4" style="color:var(--sub)">Use Claude Code, Codex, Cursor, or any coding agent. Tell it which AI service you're using, then paste this prompt.</p>
+
+          <!-- Model picker -->
+          <p class="text-xs font-medium mb-2" style="color:var(--sub)">Which AI runs your OpenClaw agent?</p>
+          <div class="flex flex-wrap gap-2 mb-4" id="model-picker">
+            <button class="model-btn btn btn-secondary btn-sm active-model" data-model="groq" style="background:rgba(99,102,241,.2);color:#a5b4fc">Groq</button>
+            <button class="model-btn btn btn-secondary btn-sm" data-model="anthropic">Anthropic</button>
+            <button class="model-btn btn btn-secondary btn-sm" data-model="openai">OpenAI</button>
+            <button class="model-btn btn btn-secondary btn-sm" data-model="openrouter">OpenRouter</button>
+            <button class="model-btn btn btn-secondary btn-sm" data-model="other">Other</button>
+          </div>
+
+          <p class="text-xs font-medium mb-2" style="color:var(--sub)">Copy this prompt → paste into your coding agent:</p>
+          <div class="code-block text-xs" id="agent-setup-prompt" style="white-space:pre-wrap;line-height:1.6"></div>
+          <button class="btn btn-primary btn-sm mt-3" onclick="copyAgentPrompt()">copy prompt</button>
         </div>
 
-        <div class="card-sm p-4 mb-4" style="border-color:rgba(99,102,241,.25)">
-          <p class="text-xs font-semibold mb-3" style="color:#a5b4fc">Add skills path to OpenClaw config</p>
-          <p class="text-xs mb-2" style="color:var(--sub)">Make sure <code class="px-1 rounded" style="background:var(--border);color:var(--text)">~/.openclaw/openclaw.json</code> knows about skills:</p>
-          <div class="code-block text-xs">{
-  <span class="key">channels</span>: { ... },  <span class="comment">// your existing Telegram config</span>
-  <span class="key">agents</span>: {
-    <span class="key">defaults</span>: {
-      <span class="key">workspace</span>: <span class="str">"~/.openclaw/workspace"</span>
-    },
-    <span class="key">list</span>: [{ <span class="key">name</span>: <span class="str">"main"</span> }]
-  }
-}<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
-        </div>
-
-        <div class="card-sm p-4 mb-4">
-          <p class="text-xs font-semibold mb-2">Restart OpenClaw to pick up skills:</p>
-          <div class="code-block text-xs">openclaw skills list    # verify skills appear
-openclaw restart<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
-        </div>
+        <!-- Manual fallback -->
+        <details class="card-sm p-4 mb-4">
+          <summary class="text-xs font-medium cursor-pointer" style="color:var(--sub)">Prefer to set up manually instead?</summary>
+          <div class="mt-3 space-y-3">
+            <div>
+              <p class="text-xs mb-1" style="color:var(--sub2)">Place config in home directory:</p>
+              <div class="code-block text-xs">mv ~/Downloads/clawmarketer.env ~/clawmarketer.env<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+            </div>
+            <div>
+              <p class="text-xs mb-1" style="color:var(--sub2)">Clone the skills into OpenClaw workspace:</p>
+              <div class="code-block text-xs">mkdir -p ~/.openclaw/workspace/skills
+git clone https://github.com/muhammadegaa/clawmarketer /tmp/clawmarketer
+cp -r /tmp/clawmarketer/skills/* ~/.openclaw/workspace/skills/<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+            </div>
+            <div>
+              <p class="text-xs mb-1" style="color:var(--sub2)">Install Python deps and restart:</p>
+              <div class="code-block text-xs">cd /tmp/clawmarketer && pip install -r requirements.txt
+openclaw restart && openclaw skills list<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+            </div>
+          </div>
+        </details>
       </div>
 
       <!-- Try it -->
       <div class="card p-5 mt-4" style="border-color:rgba(99,102,241,.3)">
         <p class="text-sm font-semibold mb-3">You're set. Try it in Telegram:</p>
         <div class="space-y-2">
-          <div class="code-block text-xs">/meta-ads analyze ads last 30 days<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
-          <div class="code-block text-xs">/data-cleanse clean my data<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-block text-xs">analyze my ads<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-block text-xs">clean my data<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
         </div>
         <p class="text-xs mt-3" style="color:var(--sub)">Progress appears live on your <a href="/" style="color:#a5b4fc" class="underline">ClawMarketer dashboard</a> as the agent runs.</p>
       </div>
@@ -364,6 +380,89 @@ openclaw restart<button class="copy-btn" onclick="copyCode(this)">copy</button><
     e.target.closest('.tab-bar').querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     e.target.classList.add('active');
   }
+
+  // ── Model picker + agent setup prompt ─────────────────────────────────────
+
+  const MODEL_CONFIG = {
+    groq:       { name: 'Groq',       key: 'GROQ_API_KEY',       model: 'llama-3.3-70b-versatile', provider: 'groq' },
+    anthropic:  { name: 'Anthropic',  key: 'ANTHROPIC_API_KEY',  model: 'claude-sonnet-4-6',        provider: 'anthropic' },
+    openai:     { name: 'OpenAI',     key: 'OPENAI_API_KEY',     model: 'gpt-4o',                   provider: 'openai' },
+    openrouter: { name: 'OpenRouter', key: 'OPENROUTER_API_KEY', model: 'anthropic/claude-sonnet-4-5', provider: 'openrouter' },
+    other:      { name: 'your AI',    key: 'AI_API_KEY',         model: 'your-model',               provider: 'custom' },
+  };
+
+  let _selectedModel = 'groq';
+
+  function buildPrompt(modelKey) {
+    const m = MODEL_CONFIG[modelKey] || MODEL_CONFIG.other;
+    return `I'm setting up ClawMarketer, an AI marketing agent platform, on my machine.
+
+Please do the following steps:
+
+1. Check if OpenClaw is installed (run: which openclaw). If not, install it:
+   curl -fsSL https://openclaw.ai/install.sh | bash
+
+2. Clone the ClawMarketer repo:
+   git clone https://github.com/muhammadegaa/clawmarketer ~/clawmarketer
+
+3. Install Python dependencies:
+   cd ~/clawmarketer && pip install -r requirements.txt
+
+4. Move the config file I downloaded:
+   mv ~/Downloads/clawmarketer.env ~/clawmarketer/clawmarketer.env
+
+5. Create the ClawMarketer skills in OpenClaw workspace:
+   mkdir -p ~/.openclaw/workspace/skills/clawmarketer-meta
+   mkdir -p ~/.openclaw/workspace/skills/clawmarketer-data
+   cp ~/clawmarketer/skills/clawmarketer-meta/SKILL.md ~/.openclaw/workspace/skills/clawmarketer-meta/SKILL.md
+   cp ~/clawmarketer/skills/clawmarketer-data/SKILL.md ~/.openclaw/workspace/skills/clawmarketer-data/SKILL.md
+
+6. Configure OpenClaw to use ${m.name} as its AI model:
+   In ~/.openclaw/openclaw.json, set:
+   "model": { "primary": "${m.provider}/${m.model}" }
+   And add my ${m.key} to ~/.openclaw/agents/main/auth-profiles.json
+
+7. Restart OpenClaw and verify:
+   openclaw restart
+   openclaw skills list
+
+Tell me when each step is done. I'll add my ${m.key} and Telegram credentials to ~/clawmarketer/clawmarketer.env manually.`;
+  }
+
+  function renderPrompt() {
+    const el = document.getElementById('agent-setup-prompt');
+    if (el) el.textContent = buildPrompt(_selectedModel);
+  }
+
+  function copyAgentPrompt() {
+    navigator.clipboard.writeText(buildPrompt(_selectedModel));
+    const btn = document.querySelector('[onclick="copyAgentPrompt()"]');
+    const orig = btn.textContent;
+    btn.textContent = 'copied!';
+    setTimeout(() => btn.textContent = orig, 2000);
+  }
+
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.model-btn');
+    if (!btn) return;
+    document.querySelectorAll('.model-btn').forEach(b => {
+      b.style.background = ''; b.style.color = '';
+    });
+    btn.style.background = 'rgba(99,102,241,.2)';
+    btn.style.color = '#a5b4fc';
+    _selectedModel = btn.dataset.model;
+    renderPrompt();
+  });
+
+  // Render once state-ready becomes visible
+  const _observer = new MutationObserver(() => {
+    if (!document.getElementById('state-ready')?.classList.contains('hidden')) {
+      renderPrompt();
+    }
+  });
+  const _target = document.getElementById('state-ready');
+  if (_target) _observer.observe(_target, { attributes: true, attributeFilter: ['class'] });
+  renderPrompt();
 </script>
 </body>
 </html>
