@@ -9,7 +9,8 @@ build/
 .venv/
 venv/
 *.csv
-!sample_meta_ads.csv
+report_*.md
 reports/
+research/
 .vercel/
 node_modules/
