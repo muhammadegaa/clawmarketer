@@ -231,17 +231,50 @@
     .empty-icon { font-size: 32px; margin-bottom: 14px; filter: grayscale(1); opacity: .4; }
     /* ── Mobile ─────────────────────────────────────────── */
     @media (max-width: 639px) {
-      #topnav { padding: 0 14px; }
+      /* Nav: top row logo+avatar, bottom row tabs */
+      #topnav {
+        padding: 0; height: auto;
+        flex-direction: column; align-items: stretch; gap: 0;
+      }
+      .nav-top-row {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 10px 16px; height: 50px;
+      }
+      .nav-tabs {
+        display: flex; align-items: center; gap: 0;
+        border-top: 1px solid var(--border);
+        margin: 0;
+      }
+      .nav-tab {
+        flex: 1; text-align: center; padding: 8px 4px;
+        font-size: 11px; border-radius: 0;
+        border-right: 1px solid var(--border);
+      }
+      .nav-tab:last-child { border-right: none; }
       .nav-user-name { display: none; }
-      .nav-tabs { gap: 0; }
-      .nav-tab { padding: 6px 10px; font-size: 12px; }
+      .nav-right { gap: 6px; }
+      /* Push content below taller mobile nav (logo row ~50px + tabs row ~33px) */
+      #page-app { padding-top: 86px; }
       .app-content { padding: 20px 14px; }
       .stats-grid { grid-template-columns: repeat(2,1fr) !important; gap: 10px; }
       .dash-two-col { grid-template-columns: 1fr !important; }
       .signin-card { padding: 36px 22px; }
       .wizard-card { padding: 0 4px; }
+      /* Runs table: hide run id column, truncate skill */
       .runs-table th:nth-child(1),
       .runs-table td:nth-child(1) { display: none; }
+      .runs-table th:nth-child(2),
+      .runs-table td:nth-child(2) { max-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      /* Integrations: single column */
+      #integrations-list .int-grid { grid-template-columns: 1fr 1fr !important; }
+      /* Setup guide modal: full width */
+      #modal-setup-guide > div { padding: 20px 16px; }
+      /* Checklist actions: stack */
+      #checklist-items > div { flex-wrap: wrap; }
+    }
+    /* Desktop: nav-top-row is invisible (flex items sit in normal flow) */
+    @media (min-width: 640px) {
+      .nav-top-row { display: contents; }
     }
   </style>
 </head>
@@ -394,20 +427,22 @@
 
   <!-- Top Nav -->
   <nav id="topnav">
-    <a href="#" class="nav-logo">
-      <div class="nav-logo-icon">C</div>
-      ClawMarketer
-    </a>
+    <div class="nav-top-row">
+      <a href="#" class="nav-logo">
+        <div class="nav-logo-icon">C</div>
+        ClawMarketer
+      </a>
+      <div class="nav-right">
+        <span class="nav-user-name" id="nav-user-name"></span>
+        <img id="nav-avatar" class="nav-avatar hidden" src="" alt="avatar" />
+        <button class="btn btn-ghost btn-sm" onclick="signOutUser()">Sign out</button>
+      </div>
+    </div>
     <div class="nav-tabs">
       <div class="nav-tab active" data-tab="dashboard" onclick="switchTab('dashboard')">Dashboard</div>
       <div class="nav-tab" data-tab="agents" onclick="switchTab('agents')">Agents</div>
       <div class="nav-tab" data-tab="runs" onclick="switchTab('runs')">Runs</div>
       <div class="nav-tab" data-tab="integrations" onclick="switchTab('integrations')">Integrations</div>
-    </div>
-    <div class="nav-right">
-      <span class="nav-user-name" id="nav-user-name"></span>
-      <img id="nav-avatar" class="nav-avatar hidden" src="" alt="avatar" />
-      <button class="btn btn-ghost btn-sm" onclick="signOutUser()">Sign out</button>
     </div>
   </nav>
 
@@ -1170,12 +1205,19 @@ function subscribeRuns() {
 }
 
 function renderDashboardStats(run) {
-  if (!run || !run.meta) return;
-  const m = run.meta;
-  if (m.spend)     document.getElementById('stat-spend').textContent = '$' + Number(m.spend).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-  if (m.ctr)       document.getElementById('stat-ctr').textContent = Number(m.ctr).toFixed(2) + '%';
-  if (m.roas)      document.getElementById('stat-roas').textContent = Number(m.roas).toFixed(2) + 'x';
-  if (m.campaigns) document.getElementById('stat-campaigns').textContent = m.campaigns;
+  if (!run) {
+    ['stat-spend','stat-ctr','stat-roas','stat-campaigns'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = '—';
+    });
+    return;
+  }
+  // result lives at run.result for agent-pushed runs
+  const r = run.result || run.meta || {};
+  if (r.total_spend != null)   document.getElementById('stat-spend').textContent = '$' + Number(r.total_spend).toLocaleString('en-US', { maximumFractionDigits: 0 });
+  if (r.overall_ctr != null)   document.getElementById('stat-ctr').textContent = Number(r.overall_ctr).toFixed(2) + '%';
+  if (r.avg_roas != null)      document.getElementById('stat-roas').textContent = Number(r.avg_roas).toFixed(2) + 'x';
+  if (r.num_campaigns != null) document.getElementById('stat-campaigns').textContent = r.num_campaigns;
 }
 
 const STAGE_LABELS = ['Fetching data', 'Analyzing', 'Generating report', 'Sending via Telegram'];
@@ -1245,7 +1287,15 @@ function skillLabel(skill) {
 
 function renderAgentsGrid(runs) {
   const grid = document.getElementById('agents-grid');
-  if (!runs?.length) return; // keep empty state
+  if (!runs?.length) {
+    grid.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">&#129302;</div>
+        <p style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:6px;">No agents have run yet</p>
+        <p style="font-size:13px;color:var(--sub);">Trigger one via Telegram — it will appear here after its first run.</p>
+      </div>`;
+    return;
+  }
 
   // Group by skill, keep latest run per skill
   const bySkill = {};
