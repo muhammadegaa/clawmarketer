@@ -13,12 +13,12 @@ user-invocable: true
 
 Install dependencies (first time only):
 ```bash
-pip install -r ~/.openclaw/workspace/skills/clawmarketer-data/requirements.txt
+pip3 install -r ~/.openclaw/workspace/skills/clawmarketer-data/requirements.txt
 ```
 
 Run the data cleansing pipeline:
 ```bash
-python ~/.openclaw/workspace/skills/clawmarketer-data/agent.py
+python3 ~/.openclaw/workspace/skills/clawmarketer-data/agent.py
 ```
 
 The script will:

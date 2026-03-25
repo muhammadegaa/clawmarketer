@@ -13,12 +13,12 @@ user-invocable: true
 
 Install dependencies (first time only):
 ```bash
-pip install -r ~/.openclaw/workspace/skills/clawmarketer-meta/requirements.txt
+pip3 install -r ~/.openclaw/workspace/skills/clawmarketer-meta/requirements.txt
 ```
 
 Run the Meta Ads analysis pipeline:
 ```bash
-python ~/.openclaw/workspace/skills/clawmarketer-meta/agent.py
+python3 ~/.openclaw/workspace/skills/clawmarketer-meta/agent.py
 ```
 
 The script will:

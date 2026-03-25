@@ -427,6 +427,18 @@
       <div style="display:flex;flex-direction:column;gap:10px;" id="checklist-items"></div>
     </div>
 
+    <!-- Demo data banner (shown only when all runs are demo) -->
+    <div id="demo-banner" class="hidden" style="background:rgba(234,179,8,.07);border:1px solid rgba(234,179,8,.2);border-radius:10px;padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:16px;">🎭</span>
+        <div>
+          <p style="font-size:13px;font-weight:600;color:var(--yellow);">You're viewing demo data</p>
+          <p style="font-size:12px;color:var(--sub);margin-top:2px;">Connect Meta Ads and trigger a real run to see your actual campaign data.</p>
+        </div>
+      </div>
+      <button class="btn btn-sm" onclick="clearDemoData()" style="background:rgba(234,179,8,.15);color:var(--yellow);border:1px solid rgba(234,179,8,.3);flex-shrink:0;">Clear demo data</button>
+    </div>
+
     <!-- Stats row -->
     <div class="stats-grid" id="stats-grid">
       <div class="card stat-card">
@@ -922,6 +934,20 @@ window.copySGCmd = async function(elId) {
   toast('Copied!', 'success');
 };
 
+window.clearDemoData = async function() {
+  const btn = document.querySelector('[onclick="clearDemoData()"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Clearing…'; }
+  try {
+    const res = await fetch(`/api/demo?uid=${_uid}`, { method: 'DELETE' });
+    const data = await res.json();
+    toast(`Cleared ${data.deleted || 0} demo run(s)`, 'success');
+  } catch(e) {
+    toast('Failed to clear demo data', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Clear demo data'; }
+  }
+};
+
 window.runDemo = async function() {
   const btn = document.getElementById('btn-demo');
   if (btn) { btn.disabled = true; btn.textContent = 'Loading demo…'; }
@@ -1130,6 +1156,11 @@ function subscribeRuns() {
       renderAgentsGrid(runs);
       renderDashboardStats(runs[0] || null);
       renderChecklist(runs);
+      // Show demo banner when ALL runs are demo (or is_demo), hide when real run exists
+      const hasReal = runs.some(r => r.triggered_by !== 'demo' && !r.is_demo);
+      const hasDemo = runs.some(r => r.triggered_by === 'demo' || r.is_demo);
+      const banner = document.getElementById('demo-banner');
+      if (banner) banner.classList.toggle('hidden', !hasDemo || hasReal);
     }, err => {
       console.warn('Firestore subscription error:', err);
     });

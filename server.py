@@ -29,8 +29,21 @@ META_ACCOUNTS_URL = "https://graph.facebook.com/v21.0/me/adaccounts"
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
+def _to_fs(value):
+    if value is None:           return {"nullValue": None}
+    if isinstance(value, bool): return {"booleanValue": value}
+    if isinstance(value, int):  return {"integerValue": str(value)}
+    if isinstance(value, float):return {"doubleValue": value}
+    if isinstance(value, str):  return {"stringValue": value}
+    if isinstance(value, list): return {"arrayValue": {"values": [_to_fs(v) for v in value]}}
+    if isinstance(value, dict): return {"mapValue": {"fields": {k: _to_fs(v) for k, v in value.items()}}}
+    return {"stringValue": str(value)}
+
+
 def _push_to_firestore(user_id: str, run_id: str, skill: str, status: str,
-                       triggered_by: str = "manual", result: dict = None):
+                       triggered_by: str = "manual", result: dict = None,
+                       stages: list = None, attachments: list = None,
+                       created_at: str = None, is_demo: bool = False):
     """Write a completed run document directly to Firestore."""
     project_id = os.getenv("FIREBASE_PROJECT_ID", "")
     api_key    = os.getenv("FIREBASE_API_KEY", "")
@@ -38,28 +51,20 @@ def _push_to_firestore(user_id: str, run_id: str, skill: str, status: str,
         return
 
     from datetime import datetime, timezone
-    now = datetime.now(timezone.utc).isoformat()
-
-    def to_fs(value):
-        if value is None:           return {"nullValue": None}
-        if isinstance(value, bool): return {"booleanValue": value}
-        if isinstance(value, int):  return {"integerValue": str(value)}
-        if isinstance(value, float):return {"doubleValue": value}
-        if isinstance(value, str):  return {"stringValue": value}
-        if isinstance(value, list): return {"arrayValue": {"values": [to_fs(v) for v in value]}}
-        if isinstance(value, dict): return {"mapValue": {"fields": {k: to_fs(v) for k, v in value.items()}}}
-        return {"stringValue": str(value)}
+    now = created_at or datetime.now(timezone.utc).isoformat()
 
     fields = {
-        "run_id":       to_fs(run_id),
-        "skill":        to_fs(skill),
-        "status":       to_fs(status),
-        "triggered_by": to_fs(triggered_by),
-        "created_at":   to_fs(now),
-        "updated_at":   to_fs(now),
+        "run_id":       _to_fs(run_id),
+        "skill":        _to_fs(skill),
+        "status":       _to_fs(status),
+        "triggered_by": _to_fs(triggered_by),
+        "created_at":   _to_fs(now),
+        "updated_at":   _to_fs(now),
+        "is_demo":      _to_fs(is_demo),
     }
-    if result:
-        fields["result"] = to_fs(result)
+    if result:      fields["result"]      = _to_fs(result)
+    if stages:      fields["stages"]      = _to_fs(stages)
+    if attachments: fields["attachments"] = _to_fs(attachments)
 
     url = (f"https://firestore.googleapis.com/v1/projects/{project_id}"
            f"/databases/(default)/documents/users/{user_id}/runs/{run_id}")
@@ -373,34 +378,151 @@ async def upload_csv(file: UploadFile = File(...)):
 
 # ── Demo ──────────────────────────────────────────────────────────────────────
 
+_DEMO_REPORT = """**Executive Summary**
+Your Meta Ads campaigns delivered strong results this period with $12,450 in spend driving a 3.2x average ROAS. Conversion volume is healthy at 847 purchases, though two campaigns are dragging down the portfolio average.
+
+**What's Working**
+- *Summer Sale 2024* leads with 4.8x ROAS on $3,200 spend — your best performer by far
+- *Retargeting — Cart Abandoners* converts at 6.2% CTR, 3x the account average
+- *Brand Awareness — Video* reaches 180K impressions at a $4.20 CPM
+
+**What Needs Attention**
+- *Prospecting — Cold Audiences* has 0.4% CTR and 0.6x ROAS — losing money on every click
+- *Engagement — Stories* CPC is $4.80 vs account average of $1.20 — needs creative refresh
+- Frequency on *Retargeting* campaigns is hitting 8.2 — audience fatigue risk
+
+**Recommended Actions**
+1. Pause *Prospecting — Cold Audiences* or cut budget 70% immediately
+2. Reallocate $1,500/week from underperformers to *Summer Sale* and *Cart Abandoners*
+3. Refresh creatives for *Engagement — Stories* (current CTR below 1%)
+4. Cap retargeting frequency at 5 to prevent audience fatigue
+5. Test Lookalike audiences based on the top 10% of purchasers from *Summer Sale*"""
+
+_META_STAGES = [
+    {"status": "done", "note": "Fetched 12 campaigns from Meta Ads API"},
+    {"status": "done", "note": "Cleaned 12 rows, dropped 0"},
+    {"status": "done", "note": "3 anomalies detected across campaigns"},
+    {"status": "done", "note": "Report + 3 charts sent to Telegram"},
+]
+
+_DATA_STAGES = [
+    {"status": "done", "note": "Found 3 CSV files in ~/Documents/data"},
+    {"status": "done", "note": "Cleaned all 3 files, removed 47 duplicate rows"},
+    {"status": "done", "note": "Data quality score: 94% — looks good"},
+    {"status": "done", "note": "3 clean files sent to Telegram"},
+]
+
+_META_ATTACHMENTS = [
+    {"name": "chart_spend.png",    "type": "photo",    "telegram_message_id": 1001},
+    {"name": "chart_ctr.png",      "type": "photo",    "telegram_message_id": 1002},
+    {"name": "chart_roas.png",     "type": "photo",    "telegram_message_id": 1003},
+    {"name": "meta_ads_clean.csv", "type": "document", "telegram_message_id": 1004},
+]
+
+_DATA_ATTACHMENTS = [
+    {"name": "clean_leads.csv",    "type": "document", "telegram_message_id": 2001},
+    {"name": "clean_orders.csv",   "type": "document", "telegram_message_id": 2002},
+    {"name": "clean_customers.csv","type": "document", "telegram_message_id": 2003},
+]
+
+
 @app.post("/api/demo")
 def run_demo(uid: str = ""):
-    groq_key = os.getenv("GROQ_API_KEY", "")
     from sample_data import generate
     csv_path = generate()
     df, clean_stats = cleaner.clean(csv_path)
     os.unlink(csv_path)
     results = analyzer.run(df)
-    try:
-        results["report"] = reporter.generate(results, groq_key)
-    except Exception as e:
-        results["report"] = f"AI report unavailable: {str(e)}"
+    results["report"] = _DEMO_REPORT
 
-    # Push demo run to Firestore so it appears in agents/runs tabs
     if uid:
-        from datetime import datetime, timezone
+        from datetime import datetime, timezone, timedelta
         import uuid as _uuid
-        run_id = "demo_" + datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S") + "_" + _uuid.uuid4().hex[:6]
+        now = datetime.now(timezone.utc)
         o = results.get("overall", {})
-        _push_to_firestore(uid, run_id, skill="clawmarketer-meta", status="done", triggered_by="demo", result={
-            "total_spend":   o.get("total_spend", 0),
-            "overall_ctr":   o.get("overall_ctr", 0),
-            "avg_roas":      o.get("avg_roas", 0),
-            "num_campaigns": o.get("num_campaigns", 0),
-            "report_text":   results.get("report", ""),
-        })
+
+        # Run 1: Meta Ads — most recent (today)
+        _push_to_firestore(
+            uid, f"demo_{now.strftime('%Y%m%d_%H%M%S')}_a1", "clawmarketer-meta", "done",
+            triggered_by="demo", is_demo=True,
+            created_at=(now).isoformat(),
+            stages=_META_STAGES, attachments=_META_ATTACHMENTS,
+            result={
+                "total_spend":   o.get("total_spend", 12450.80),
+                "overall_ctr":   o.get("overall_ctr", 2.14),
+                "avg_roas":      o.get("avg_roas", 3.20),
+                "num_campaigns": o.get("num_campaigns", 12),
+                "report_text":   _DEMO_REPORT,
+                "anomalies": [
+                    "Low CTR (0.4%) on: Prospecting — Cold Audiences",
+                    "ROAS below 1.0 (0.6x) — losing money on: Prospecting — Cold Audiences",
+                    "Spend spike ($4,200) on campaign: Summer Sale 2024",
+                ],
+            },
+        )
+
+        # Run 2: Meta Ads — last month
+        _push_to_firestore(
+            uid, f"demo_{(now - timedelta(days=7)).strftime('%Y%m%d_%H%M%S')}_a2", "clawmarketer-meta", "done",
+            triggered_by="demo", is_demo=True,
+            created_at=(now - timedelta(days=7)).isoformat(),
+            stages=_META_STAGES, attachments=_META_ATTACHMENTS,
+            result={
+                "total_spend":   9820.40,
+                "overall_ctr":   1.87,
+                "avg_roas":      2.80,
+                "num_campaigns": 10,
+                "report_text":   _DEMO_REPORT,
+                "anomalies": ["Low CTR (0.5%) on: Brand Awareness — Video"],
+            },
+        )
+
+        # Run 3: Data Cleaner
+        _push_to_firestore(
+            uid, f"demo_{(now - timedelta(days=3)).strftime('%Y%m%d_%H%M%S')}_b1", "clawmarketer-data", "done",
+            triggered_by="demo", is_demo=True,
+            created_at=(now - timedelta(days=3)).isoformat(),
+            stages=_DATA_STAGES, attachments=_DATA_ATTACHMENTS,
+            result={
+                "files_processed":    3,
+                "total_rows_removed": 47,
+                "report_text": "Processed 3 files (leads.csv, orders.csv, customers.csv). Removed 47 duplicate rows across all files. Data quality looks healthy — column formats are consistent and no critical nulls detected.",
+                "anomalies": [],
+            },
+        )
 
     return _serialize(results, clean_stats)
+
+
+@app.delete("/api/demo")
+def clear_demo(uid: str = ""):
+    """Delete all demo runs for a user from Firestore."""
+    if not uid:
+        raise HTTPException(status_code=400, detail="Missing uid")
+    project_id = os.getenv("FIREBASE_PROJECT_ID", "")
+    api_key    = os.getenv("FIREBASE_API_KEY", "")
+    if not project_id:
+        return {"deleted": 0}
+
+    # List all runs
+    list_url = (f"https://firestore.googleapis.com/v1/projects/{project_id}"
+                f"/databases/(default)/documents/users/{uid}/runs")
+    deleted = 0
+    try:
+        resp = http.get(list_url, params={"key": api_key})
+        docs = resp.json().get("documents", [])
+        for doc in docs:
+            fields = doc.get("fields", {})
+            is_demo = fields.get("is_demo", {}).get("booleanValue", False)
+            triggered_by = fields.get("triggered_by", {}).get("stringValue", "")
+            if is_demo or triggered_by == "demo":
+                del_url = f"https://firestore.googleapis.com/v1/{doc['name']}"
+                http.delete(del_url, params={"key": api_key})
+                deleted += 1
+    except Exception as e:
+        print(f"[Firestore] clear_demo failed: {e}")
+
+    return {"deleted": deleted}
 
 
 # ── OpenClaw config download ───────────────────────────────────────────────────
