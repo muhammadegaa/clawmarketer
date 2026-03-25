@@ -15,17 +15,21 @@
     body { background:var(--bg); color:var(--text); font-family:'Inter',system-ui,sans-serif; }
     ::-webkit-scrollbar { width:4px; } ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:4px; }
 
-    .card   { background:var(--card); border:1px solid var(--border); border-radius:12px; }
+    .card    { background:var(--card); border:1px solid var(--border); border-radius:12px; }
     .card-sm { background:var(--card); border:1px solid var(--border); border-radius:8px; }
-    .btn    { display:inline-flex; align-items:center; gap:6px; padding:9px 18px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; border:none; transition:all .15s; text-decoration:none; }
+    .btn     { display:inline-flex; align-items:center; gap:6px; padding:9px 18px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; border:none; transition:all .15s; text-decoration:none; }
     .btn-primary { background:var(--indigo); color:#fff; }
     .btn-primary:hover { background:#4f46e5; }
+    .btn-secondary { background:var(--border); color:var(--text); }
+    .btn-secondary:hover { background:var(--border2); }
+    .btn-sm { padding:6px 12px; font-size:12px; }
 
     pre, .code-block {
       background:#07070e; border:1px solid var(--border2); border-radius:8px;
       padding:14px 16px; font-family:'JetBrains Mono','Fira Code','Monaco',monospace;
       font-size:12px; color:#a5b4fc; overflow-x:auto; position:relative; white-space:pre;
     }
+    .code-block.wrap { white-space:pre-wrap; line-height:1.6; }
     .comment { color:var(--sub); }
     .key     { color:#f9a8d4; }
     .val     { color:#86efac; }
@@ -34,7 +38,7 @@
     .copy-btn { position:absolute; top:8px; right:8px; background:var(--border); border:1px solid var(--border2); border-radius:6px; padding:3px 10px; font-size:11px; color:var(--sub); cursor:pointer; font-family:system-ui; }
     .copy-btn:hover { color:var(--text); }
 
-    .step-num { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; flex-shrink:0; background:rgba(99,102,241,.15); color:#a5b4fc; }
+    .step-num  { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; flex-shrink:0; background:rgba(99,102,241,.15); color:#a5b4fc; }
     .step-num.done { background:rgba(34,197,94,.12); color:#4ade80; }
     .step-line { width:1px; background:var(--border); margin:4px auto 4px 15px; min-height:28px; }
 
@@ -42,12 +46,13 @@
     .nav-link:hover { color:var(--text); }
     .nav-link.active { color:var(--text); }
 
-    .tab-bar { display:flex; border-bottom:1px solid var(--border); }
-    .tab { padding:8px 14px; font-size:12px; font-weight:500; color:var(--sub); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; transition:all .15s; }
-    .tab.active { color:#a5b4fc; border-bottom-color:var(--indigo); }
-
     .badge-indigo { background:rgba(99,102,241,.15); color:#a5b4fc; border-radius:20px; padding:2px 10px; font-size:11px; font-weight:600; }
-    .badge-green  { background:rgba(34,197,94,.12); color:#4ade80; border-radius:20px; padding:2px 10px; font-size:11px; font-weight:600; }
+
+    .model-btn { padding:5px 14px; font-size:12px; font-weight:500; border-radius:6px; cursor:pointer; border:1px solid var(--border2); background:var(--card); color:var(--sub); transition:all .15s; }
+    .model-btn.active { background:rgba(99,102,241,.2); color:#a5b4fc; border-color:var(--indigo); }
+
+    details summary { cursor:pointer; }
+    details summary::-webkit-details-marker { display:none; }
   </style>
 </head>
 <body class="min-h-screen">
@@ -84,12 +89,11 @@
     </div>
     <div class="flex-1 pb-8">
       <h2 class="font-semibold text-base mb-1">Install OpenClaw</h2>
-      <p class="text-sm mb-4" style="color:var(--sub)">OpenClaw is an open-source AI agent platform that runs on your machine. Install it with one command:</p>
+      <p class="text-sm mb-4" style="color:var(--sub)">OpenClaw is an open-source AI agent platform that runs on your machine.</p>
 
-      <div class="code-block mb-3">curl -fsSL https://openclaw.ai/install.sh | bash
-openclaw onboard<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      <div class="code-block mb-3">curl -fsSL https://openclaw.ai/install.sh | bash<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
 
-      <p class="text-xs mb-3" style="color:var(--sub2)">Requires macOS or Linux. The <code class="px-1 rounded" style="background:var(--border);color:var(--text)">onboard</code> command walks you through initial setup interactively.</p>
+      <p class="text-xs mb-3" style="color:var(--sub2)">Requires macOS or Linux. After install, run <code class="px-1 rounded" style="background:var(--border);color:var(--text)">openclaw onboard</code> to complete initial setup.</p>
 
       <div class="card-sm p-3 flex gap-2">
         <svg width="13" height="13" fill="none" stroke="#a5b4fc" stroke-width="2" viewBox="0 0 24 24" class="mt-0.5 flex-shrink-0"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
@@ -98,7 +102,7 @@ openclaw onboard<button class="copy-btn" onclick="copyCode(this)">copy</button><
     </div>
   </div>
 
-  <!-- Step 2 — Create Telegram Bot -->
+  <!-- Step 2 — Telegram bot -->
   <div class="flex gap-5 mb-1">
     <div class="flex flex-col items-center">
       <div class="step-num">2</div>
@@ -106,205 +110,143 @@ openclaw onboard<button class="copy-btn" onclick="copyCode(this)">copy</button><
     </div>
     <div class="flex-1 pb-8">
       <h2 class="font-semibold text-base mb-1">Create a Telegram bot</h2>
-      <p class="text-sm mb-4" style="color:var(--sub)">Your Telegram bot is how you talk to the agent. It takes 2 minutes to create.</p>
+      <p class="text-sm mb-4" style="color:var(--sub)">This is how you send commands to the agent — "analyze my ads", "clean my data", etc.</p>
 
       <div class="card p-5 mb-4">
         <ol class="space-y-3 text-sm" style="color:var(--sub)">
-          <li class="flex gap-2"><span class="font-bold" style="color:#a5b4fc">1.</span> Open Telegram → search <strong class="font-semibold" style="color:var(--text)">@BotFather</strong></li>
-          <li class="flex gap-2"><span class="font-bold" style="color:#a5b4fc">2.</span> Send <code class="px-1.5 py-0.5 rounded text-xs" style="background:var(--border);color:#a5b4fc">/newbot</code> → follow prompts → copy the bot token</li>
-          <li class="flex gap-2"><span class="font-bold" style="color:#a5b4fc">3.</span> Find your Telegram user ID (needed for allowlist):<br>
-            <code class="text-xs mt-1 inline-block px-2 py-1 rounded" style="background:var(--border);color:#a5b4fc">curl "https://api.telegram.org/bot&lt;YOUR_TOKEN&gt;/getUpdates"</code>
-            <span class="block mt-1 text-xs" style="color:var(--sub2)">Send any message to your bot first, then look for <code style="color:var(--text)">from.id</code> in the response.</span>
-          </li>
+          <li class="flex gap-2"><span class="font-bold" style="color:#a5b4fc">1.</span> Open Telegram → search <strong style="color:var(--text)">@BotFather</strong> → send <code class="px-1.5 py-0.5 rounded text-xs" style="background:var(--border);color:#a5b4fc">/newbot</code></li>
+          <li class="flex gap-2"><span class="font-bold" style="color:#a5b4fc">2.</span> Follow prompts → copy the bot token (looks like <code class="px-1.5 py-0.5 rounded text-xs" style="background:var(--border);color:#a5b4fc">123456:ABCdef...</code>)</li>
+          <li class="flex gap-2"><span class="font-bold" style="color:#a5b4fc">3.</span> Get your Telegram user ID — message <strong style="color:var(--text)">@userinfobot</strong>, it replies instantly with your numeric ID</li>
         </ol>
       </div>
 
-      <p class="text-sm mb-3" style="color:var(--sub)">Now configure OpenClaw. Edit <code class="px-1 rounded" style="background:var(--border);color:var(--text)">~/.openclaw/openclaw.json</code>:</p>
-
+      <p class="text-sm mb-2" style="color:var(--sub)">Add your bot to <code class="px-1 rounded" style="background:var(--border);color:var(--text)">~/.openclaw/openclaw.json</code>:</p>
       <div class="code-block mb-3">{
-  <span class="key">channels</span>: {
-    <span class="key">telegram</span>: {
-      <span class="key">enabled</span>:   <span class="val">true</span>,
-      <span class="key">botToken</span>:  <span class="str">"YOUR_TELEGRAM_BOT_TOKEN"</span>,
-      <span class="key">dmPolicy</span>:  <span class="str">"allowlist"</span>,
-      <span class="key">allowFrom</span>: [<span class="val">YOUR_TELEGRAM_USER_ID</span>]  <span class="comment">// numeric ID</span>
+  <span class="key">"channels"</span>: {
+    <span class="key">"telegram"</span>: {
+      <span class="key">"enabled"</span>:   <span class="val">true</span>,
+      <span class="key">"botToken"</span>:  <span class="str">"YOUR_BOT_TOKEN"</span>,
+      <span class="key">"dmPolicy"</span>:  <span class="str">"pairing"</span>
     }
   }
 }<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
 
-      <div class="code-block">openclaw restart<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      <div class="code-block mb-3">openclaw restart<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+
+      <p class="text-xs" style="color:var(--sub2)">Then send any message to your bot — OpenClaw will prompt you to pair it with your Telegram account.</p>
     </div>
   </div>
 
-  <!-- Step 3 — Add Skills -->
+  <!-- Step 3 — Agent setup prompt -->
   <div class="flex gap-5 mb-1">
     <div class="flex flex-col items-center">
       <div class="step-num">3</div>
       <div class="step-line"></div>
     </div>
     <div class="flex-1 pb-8">
-      <h2 class="font-semibold text-base mb-1">Add ClawMarketer skills</h2>
-      <p class="text-sm mb-4" style="color:var(--sub)">Skills are directories in <code class="px-1 rounded" style="background:var(--border);color:var(--text)">~/.openclaw/skills/</code>. Create two skills — one for Meta Ads, one for data cleansing.</p>
+      <h2 class="font-semibold text-base mb-1">Set up ClawMarketer skills</h2>
+      <p class="text-sm mb-4" style="color:var(--sub)">The fastest way is to paste a prompt into any coding agent (Claude Code, Codex, Cursor) and let it do the rest. You only need to add your private keys manually.</p>
 
-      <div class="tab-bar px-0 mb-4">
-        <div class="tab active" onclick="switchSkillTab(event,'meta')">Meta Ads Skill</div>
-        <div class="tab" onclick="switchSkillTab(event,'data')">Data Cleansing Skill</div>
+      <!-- Model picker -->
+      <div class="card p-5 mb-4">
+        <p class="text-xs font-semibold mb-3" style="color:var(--sub)">WHICH AI RUNS YOUR OPENCLAW AGENT?</p>
+        <div class="flex flex-wrap gap-2 mb-5" id="model-picker">
+          <button class="model-btn active" data-model="groq">Groq</button>
+          <button class="model-btn" data-model="anthropic">Anthropic</button>
+          <button class="model-btn" data-model="openai">OpenAI</button>
+          <button class="model-btn" data-model="openrouter">OpenRouter</button>
+          <button class="model-btn" data-model="other">Other</button>
+        </div>
+
+        <p class="text-xs font-semibold mb-2" style="color:var(--sub)">PASTE THIS INTO YOUR CODING AGENT</p>
+        <div class="code-block wrap mb-3" id="agent-setup-prompt"></div>
+        <button class="btn btn-primary btn-sm" onclick="copyAgentPrompt()">copy prompt</button>
       </div>
 
-      <!-- Meta skill -->
-      <div id="skill-meta">
-        <div class="code-block mb-3">mkdir -p ~/.openclaw/skills/clawmarketer-meta<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
-
-        <p class="text-xs mb-2" style="color:var(--sub)">Create <code class="px-1 rounded" style="background:var(--border);color:var(--text)">~/.openclaw/skills/clawmarketer-meta/SKILL.md</code>:</p>
-        <div class="code-block" style="font-size:11px; line-height:1.7">---
-name: meta-ads
-description: Analyze Meta Ads campaigns, generate AI report, send to Telegram
-user-invocable: true
----
-
-## Meta Ads Analysis
-
-Analyze Meta Ads performance via ClawMarketer.
-
-## Configuration
-Load from ~/clawmarketer.env:
-- CLAWMARKETER_URL, CLAWMARKETER_USER_ID, META_ACCESS_TOKEN
-
-## Steps
-1. Load config: `source ~/clawmarketer.env`
-2. Push stage 1 running to $CLAWMARKETER_URL/api/agent/push
-3. Call Meta Ads Insights API with META_ACCESS_TOKEN
-4. Clean, analyze, generate AI report
-5. Push each stage progress to ClawMarketer
-6. Send summary + charts to Telegram
-
-## Triggers
-User says: "analyze my ads", "analyze ads last 30 days", "run ads report"
-<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
-      </div>
-
-      <!-- Data skill -->
-      <div id="skill-data" class="hidden">
-        <div class="code-block mb-3">mkdir -p ~/.openclaw/skills/clawmarketer-data<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
-
-        <p class="text-xs mb-2" style="color:var(--sub)">Create <code class="px-1 rounded" style="background:var(--border);color:var(--text)">~/.openclaw/skills/clawmarketer-data/SKILL.md</code>:</p>
-        <div class="code-block" style="font-size:11px; line-height:1.7">---
-name: data-cleanse
-description: Scan local CSV/Excel files, clean, deduplicate, send report
-user-invocable: true
----
-
-## Data Cleansing Agent
-
-Scan and clean local data files via ClawMarketer.
-
-## Configuration
-Load from ~/clawmarketer.env:
-- CLAWMARKETER_URL, CLAWMARKETER_USER_ID, DATA_DIR
-
-## Steps
-1. Load config: `source ~/clawmarketer.env`
-2. Scan DATA_DIR for CSV/Excel files (skip files starting with clean_)
-3. For each file: remove duplicates, fix nulls, normalize columns
-4. Save clean_ versions in same directory
-5. Push progress to ClawMarketer after each file
-6. Send AI summary + clean files to Telegram
-
-## Triggers
-User says: "clean my data", "clean data in ~/reports", "analyze my files"
-<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
-      </div>
+      <!-- Manual fallback -->
+      <details class="card-sm p-4">
+        <summary class="text-xs font-medium flex items-center gap-2" style="color:var(--sub)">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+          Prefer to set up manually?
+        </summary>
+        <div class="mt-4 space-y-3">
+          <div>
+            <p class="text-xs mb-1" style="color:var(--sub2)">Clone the repo and install deps:</p>
+            <div class="code-block text-xs">git clone https://github.com/muhammadegaa/clawmarketer ~/clawmarketer
+cd ~/clawmarketer && pip install -r requirements.txt<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          </div>
+          <div>
+            <p class="text-xs mb-1" style="color:var(--sub2)">Copy skills into OpenClaw workspace:</p>
+            <div class="code-block text-xs">mkdir -p ~/.openclaw/workspace/skills
+cp -r ~/clawmarketer/skills/* ~/.openclaw/workspace/skills/<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          </div>
+          <div>
+            <p class="text-xs mb-1" style="color:var(--sub2)">Verify and restart:</p>
+            <div class="code-block text-xs">openclaw skills list   # clawmarketer-meta + clawmarketer-data should appear
+openclaw restart<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          </div>
+        </div>
+      </details>
     </div>
   </div>
 
-  <!-- Step 4 — Connect to ClawMarketer -->
+  <!-- Step 4 — Connect + config -->
   <div class="flex gap-5">
     <div class="flex flex-col items-center">
       <div class="step-num" id="step4-num">4</div>
     </div>
     <div class="flex-1 pb-8">
-      <h2 class="font-semibold text-base mb-1">Connect to ClawMarketer</h2>
-      <p class="text-sm mb-4" style="color:var(--sub)">Download your personal config file. It contains your ClawMarketer user ID and Meta token so the skills know where to push progress.</p>
+      <h2 class="font-semibold text-base mb-1">Add your credentials</h2>
+      <p class="text-sm mb-4" style="color:var(--sub)">Download your pre-filled config from the dashboard, then manually add the three private keys the agent setup prompt left blank.</p>
 
       <!-- Not signed in -->
       <div id="state-no-auth" class="card p-5 mb-4">
-        <p class="text-sm mb-3" style="color:var(--sub)">Sign in to ClawMarketer first to generate your config.</p>
+        <p class="text-sm mb-3" style="color:var(--sub)">Sign in first to generate your personal config file.</p>
         <a href="/" class="btn btn-primary text-sm">Go to dashboard →</a>
       </div>
 
       <!-- Signed in, no Meta -->
       <div id="state-no-meta" class="hidden card p-5 mb-4">
-        <p class="text-sm mb-3" style="color:var(--sub)">Connect Meta Ads on the dashboard to include your access token in the config file.</p>
+        <p class="text-sm mb-3" style="color:var(--sub)">Connect Meta Ads on the dashboard so your access token is included in the config.</p>
         <a href="/" class="btn btn-primary text-sm">Connect Meta Ads →</a>
       </div>
 
       <!-- Ready -->
       <div id="state-ready" class="hidden">
-        <div class="card p-5 mb-4">
+        <div class="card p-5 mb-3">
           <div class="flex items-center gap-2 mb-3">
             <div class="w-2 h-2 rounded-full" style="background:var(--green)"></div>
             <span class="text-sm font-medium" style="color:var(--green)">Ready — Meta Ads connected</span>
           </div>
-          <p class="text-sm mb-4" style="color:var(--sub)">Download your pre-filled config file — it has your user ID and Meta token already in it.</p>
+          <p class="text-sm mb-4" style="color:var(--sub)">Download your config — it has your user ID and Meta token pre-filled.</p>
           <button onclick="downloadConfig()" class="btn btn-primary text-sm">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Download clawmarketer.env
           </button>
         </div>
-
-        <!-- AI Agent Setup Prompt -->
-        <div class="card p-5 mb-4" style="border-color:rgba(99,102,241,.3)">
-          <p class="text-sm font-semibold mb-1">Let an AI agent set everything up for you</p>
-          <p class="text-xs mb-4" style="color:var(--sub)">Use Claude Code, Codex, Cursor, or any coding agent. Tell it which AI service you're using, then paste this prompt.</p>
-
-          <!-- Model picker -->
-          <p class="text-xs font-medium mb-2" style="color:var(--sub)">Which AI runs your OpenClaw agent?</p>
-          <div class="flex flex-wrap gap-2 mb-4" id="model-picker">
-            <button class="model-btn btn btn-secondary btn-sm active-model" data-model="groq" style="background:rgba(99,102,241,.2);color:#a5b4fc">Groq</button>
-            <button class="model-btn btn btn-secondary btn-sm" data-model="anthropic">Anthropic</button>
-            <button class="model-btn btn btn-secondary btn-sm" data-model="openai">OpenAI</button>
-            <button class="model-btn btn btn-secondary btn-sm" data-model="openrouter">OpenRouter</button>
-            <button class="model-btn btn btn-secondary btn-sm" data-model="other">Other</button>
-          </div>
-
-          <p class="text-xs font-medium mb-2" style="color:var(--sub)">Copy this prompt → paste into your coding agent:</p>
-          <div class="code-block text-xs" id="agent-setup-prompt" style="white-space:pre-wrap;line-height:1.6"></div>
-          <button class="btn btn-primary btn-sm mt-3" onclick="copyAgentPrompt()">copy prompt</button>
-        </div>
-
-        <!-- Manual fallback -->
-        <details class="card-sm p-4 mb-4">
-          <summary class="text-xs font-medium cursor-pointer" style="color:var(--sub)">Prefer to set up manually instead?</summary>
-          <div class="mt-3 space-y-3">
-            <div>
-              <p class="text-xs mb-1" style="color:var(--sub2)">Place config in home directory:</p>
-              <div class="code-block text-xs">mv ~/Downloads/clawmarketer.env ~/clawmarketer.env<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
-            </div>
-            <div>
-              <p class="text-xs mb-1" style="color:var(--sub2)">Clone the skills into OpenClaw workspace:</p>
-              <div class="code-block text-xs">mkdir -p ~/.openclaw/workspace/skills
-git clone https://github.com/muhammadegaa/clawmarketer /tmp/clawmarketer
-cp -r /tmp/clawmarketer/skills/* ~/.openclaw/workspace/skills/<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
-            </div>
-            <div>
-              <p class="text-xs mb-1" style="color:var(--sub2)">Install Python deps and restart:</p>
-              <div class="code-block text-xs">cd /tmp/clawmarketer && pip install -r requirements.txt
-openclaw restart && openclaw skills list<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
-            </div>
-          </div>
-        </details>
       </div>
+
+      <!-- Always shown: what to fill in manually -->
+      <div class="card-sm p-4 mb-3">
+        <p class="text-xs font-semibold mb-3" style="color:var(--sub)">FILL THESE IN MANUALLY (keep them private)</p>
+        <div class="space-y-2 text-xs font-mono" style="color:var(--sub)">
+          <div class="flex gap-2"><span style="color:#f9a8d4">GROQ_API_KEY</span><span style="color:var(--sub2)">=</span><span>get from console.groq.com</span></div>
+          <div class="flex gap-2"><span style="color:#f9a8d4">TELEGRAM_BOT_TOKEN</span><span style="color:var(--sub2)">=</span><span>from @BotFather (Step 2)</span></div>
+          <div class="flex gap-2"><span style="color:#f9a8d4">TELEGRAM_CHAT_ID</span><span style="color:var(--sub2)">=</span><span>from @userinfobot (Step 2)</span></div>
+        </div>
+      </div>
+
+      <div class="code-block text-xs mb-3">mv ~/Downloads/clawmarketer.env ~/clawmarketer/clawmarketer.env<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
 
       <!-- Try it -->
       <div class="card p-5 mt-4" style="border-color:rgba(99,102,241,.3)">
-        <p class="text-sm font-semibold mb-3">You're set. Try it in Telegram:</p>
+        <p class="text-sm font-semibold mb-3">Done. Send these to your Telegram bot:</p>
         <div class="space-y-2">
           <div class="code-block text-xs">analyze my ads<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
           <div class="code-block text-xs">clean my data<button class="copy-btn" onclick="copyCode(this)">copy</button></div>
         </div>
-        <p class="text-xs mt-3" style="color:var(--sub)">Progress appears live on your <a href="/" style="color:#a5b4fc" class="underline">ClawMarketer dashboard</a> as the agent runs.</p>
+        <p class="text-xs mt-3" style="color:var(--sub)">Progress appears live on your <a href="/" style="color:#a5b4fc" class="underline">ClawMarketer dashboard</a>.</p>
       </div>
-
     </div>
   </div>
 
@@ -319,15 +261,10 @@ openclaw restart && openclaw skills list<button class="copy-btn" onclick="copyCo
 
   const app  = initializeApp(cfg.firebase);
   const auth = getAuth(app);
-
-  // Read meta token from localStorage (set by dashboard)
   const metaToken = localStorage.getItem('meta_token');
 
   onAuthStateChanged(auth, async user => {
-    if (!user) {
-      document.getElementById('state-no-auth').classList.remove('hidden');
-      return;
-    }
+    if (!user) return;
 
     window._uid = user.uid;
     document.getElementById('user-badge').classList.remove('hidden');
@@ -339,7 +276,6 @@ openclaw restart && openclaw skills list<button class="copy-btn" onclick="copyCo
       return;
     }
 
-    // Verify meta token still valid
     try {
       const status = await fetch(`/auth/status?token=${encodeURIComponent(metaToken)}`).then(r => r.json());
       if (status.connected) {
@@ -374,33 +310,24 @@ openclaw restart && openclaw skills list<button class="copy-btn" onclick="copyCo
     setTimeout(() => btn.textContent = 'copy', 2000);
   }
 
-  function switchSkillTab(e, tab) {
-    document.getElementById('skill-meta').classList.toggle('hidden', tab !== 'meta');
-    document.getElementById('skill-data').classList.toggle('hidden', tab !== 'data');
-    e.target.closest('.tab-bar').querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    e.target.classList.add('active');
-  }
-
-  // ── Model picker + agent setup prompt ─────────────────────────────────────
+  // ── Model picker + agent setup prompt ──────────────────────────────────────
 
   const MODEL_CONFIG = {
-    groq:       { name: 'Groq',       key: 'GROQ_API_KEY',       model: 'llama-3.3-70b-versatile', provider: 'groq' },
-    anthropic:  { name: 'Anthropic',  key: 'ANTHROPIC_API_KEY',  model: 'claude-sonnet-4-6',        provider: 'anthropic' },
-    openai:     { name: 'OpenAI',     key: 'OPENAI_API_KEY',     model: 'gpt-4o',                   provider: 'openai' },
-    openrouter: { name: 'OpenRouter', key: 'OPENROUTER_API_KEY', model: 'anthropic/claude-sonnet-4-5', provider: 'openrouter' },
-    other:      { name: 'your AI',    key: 'AI_API_KEY',         model: 'your-model',               provider: 'custom' },
+    groq:       { name: 'Groq',       keyName: 'GROQ_API_KEY',       model: 'groq/llama-3.3-70b-versatile' },
+    anthropic:  { name: 'Anthropic',  keyName: 'ANTHROPIC_API_KEY',  model: 'anthropic/claude-sonnet-4-6' },
+    openai:     { name: 'OpenAI',     keyName: 'OPENAI_API_KEY',     model: 'openai/gpt-4o' },
+    openrouter: { name: 'OpenRouter', keyName: 'OPENROUTER_API_KEY', model: 'openrouter/anthropic/claude-sonnet-4-5' },
+    other:      { name: 'your AI',    keyName: 'AI_API_KEY',         model: 'your-provider/your-model' },
   };
 
   let _selectedModel = 'groq';
 
   function buildPrompt(modelKey) {
     const m = MODEL_CONFIG[modelKey] || MODEL_CONFIG.other;
-    return `I'm setting up ClawMarketer, an AI marketing agent platform, on my machine.
+    return `I'm setting up ClawMarketer on my machine. Please do the following:
 
-Please do the following steps:
-
-1. Check if OpenClaw is installed (run: which openclaw). If not, install it:
-   curl -fsSL https://openclaw.ai/install.sh | bash
+1. Check if OpenClaw is installed (run: which openclaw).
+   If not: curl -fsSL https://openclaw.ai/install.sh | bash
 
 2. Clone the ClawMarketer repo:
    git clone https://github.com/muhammadegaa/clawmarketer ~/clawmarketer
@@ -408,30 +335,26 @@ Please do the following steps:
 3. Install Python dependencies:
    cd ~/clawmarketer && pip install -r requirements.txt
 
-4. Move the config file I downloaded:
-   mv ~/Downloads/clawmarketer.env ~/clawmarketer/clawmarketer.env
+4. Copy the ClawMarketer skills into OpenClaw:
+   mkdir -p ~/.openclaw/workspace/skills
+   cp -r ~/clawmarketer/skills/* ~/.openclaw/workspace/skills/
 
-5. Create the ClawMarketer skills in OpenClaw workspace:
-   mkdir -p ~/.openclaw/workspace/skills/clawmarketer-meta
-   mkdir -p ~/.openclaw/workspace/skills/clawmarketer-data
-   cp ~/clawmarketer/skills/clawmarketer-meta/SKILL.md ~/.openclaw/workspace/skills/clawmarketer-meta/SKILL.md
-   cp ~/clawmarketer/skills/clawmarketer-data/SKILL.md ~/.openclaw/workspace/skills/clawmarketer-data/SKILL.md
+5. Configure OpenClaw to use ${m.name} as its AI model.
+   In ~/.openclaw/openclaw.json set the primary model to:
+   "${m.model}"
+   Add my ${m.keyName} to ~/.openclaw/agents/main/auth-profiles.json
+   (I will fill in the actual key value myself)
 
-6. Configure OpenClaw to use ${m.name} as its AI model:
-   In ~/.openclaw/openclaw.json, set:
-   "model": { "primary": "${m.provider}/${m.model}" }
-   And add my ${m.key} to ~/.openclaw/agents/main/auth-profiles.json
-
-7. Restart OpenClaw and verify:
+6. Restart and verify:
    openclaw restart
    openclaw skills list
+   (clawmarketer-meta and clawmarketer-data should appear as ready)
 
-Tell me when each step is done. I'll add my ${m.key} and Telegram credentials to ~/clawmarketer/clawmarketer.env manually.`;
+Tell me when done. I will manually add ${m.keyName}, TELEGRAM_BOT_TOKEN, and TELEGRAM_CHAT_ID to ~/clawmarketer/clawmarketer.env.`;
   }
 
   function renderPrompt() {
-    const el = document.getElementById('agent-setup-prompt');
-    if (el) el.textContent = buildPrompt(_selectedModel);
+    document.getElementById('agent-setup-prompt').textContent = buildPrompt(_selectedModel);
   }
 
   function copyAgentPrompt() {
@@ -442,26 +365,15 @@ Tell me when each step is done. I'll add my ${m.key} and Telegram credentials to
     setTimeout(() => btn.textContent = orig, 2000);
   }
 
-  document.addEventListener('click', e => {
+  document.getElementById('model-picker').addEventListener('click', e => {
     const btn = e.target.closest('.model-btn');
     if (!btn) return;
-    document.querySelectorAll('.model-btn').forEach(b => {
-      b.style.background = ''; b.style.color = '';
-    });
-    btn.style.background = 'rgba(99,102,241,.2)';
-    btn.style.color = '#a5b4fc';
+    document.querySelectorAll('.model-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
     _selectedModel = btn.dataset.model;
     renderPrompt();
   });
 
-  // Render once state-ready becomes visible
-  const _observer = new MutationObserver(() => {
-    if (!document.getElementById('state-ready')?.classList.contains('hidden')) {
-      renderPrompt();
-    }
-  });
-  const _target = document.getElementById('state-ready');
-  if (_target) _observer.observe(_target, { attributes: true, attributeFilter: ['class'] });
   renderPrompt();
 </script>
 </body>
