@@ -521,25 +521,12 @@
 
         <!-- Individual fields -->
         <div class="card p-4 space-y-3">
+          <!-- non-sensitive -->
           <div>
             <div class="text-xs font-medium mb-1" style="color:var(--sub)">CLAWMARKETER_URL</div>
             <div class="flex items-center gap-2">
               <code class="flex-1 text-xs px-3 py-2 rounded" style="background:var(--border);color:#a5b4fc">https://clawmarketer.vercel.app</code>
               <button class="copy-field-btn btn btn-secondary btn-sm" data-val="https://clawmarketer.vercel.app">copy</button>
-            </div>
-          </div>
-          <div>
-            <div class="text-xs font-medium mb-1" style="color:var(--sub)">CLAWMARKETER_USER_ID</div>
-            <div class="flex items-center gap-2">
-              <code class="flex-1 text-xs px-3 py-2 rounded profile-uid" style="background:var(--border);color:#a5b4fc">—</code>
-              <button class="copy-field-btn btn btn-secondary btn-sm profile-uid-copy" data-val="">copy</button>
-            </div>
-          </div>
-          <div>
-            <div class="text-xs font-medium mb-1" style="color:var(--sub)">META_ACCESS_TOKEN</div>
-            <div class="flex items-center gap-2">
-              <code class="flex-1 text-xs px-3 py-2 rounded truncate profile-token" style="background:var(--border);color:#a5b4fc">not connected</code>
-              <button class="copy-field-btn btn btn-secondary btn-sm profile-token-copy" data-val="">copy</button>
             </div>
           </div>
           <div>
@@ -549,13 +536,33 @@
               <button class="copy-field-btn btn btn-secondary btn-sm profile-account-copy" data-val="">copy</button>
             </div>
           </div>
+          <!-- sensitive — masked by default -->
+          <div>
+            <div class="text-xs font-medium mb-1" style="color:var(--sub)">CLAWMARKETER_USER_ID</div>
+            <div class="flex items-center gap-2">
+              <code class="flex-1 text-xs px-3 py-2 rounded profile-uid" style="background:var(--border);color:#a5b4fc">••••••••••••••••</code>
+              <button class="reveal-btn btn btn-secondary btn-sm" data-field="uid" data-val="" data-revealed="0">show</button>
+              <button class="copy-field-btn btn btn-secondary btn-sm profile-uid-copy" data-val="">copy</button>
+            </div>
+          </div>
+          <div>
+            <div class="text-xs font-medium mb-1" style="color:var(--sub)">META_ACCESS_TOKEN</div>
+            <div class="flex items-center gap-2">
+              <code class="flex-1 text-xs px-3 py-2 rounded truncate profile-token" style="background:var(--border);color:#a5b4fc">••••••••••••••••</code>
+              <button class="reveal-btn btn btn-secondary btn-sm" data-field="token" data-val="" data-revealed="0">show</button>
+              <button class="copy-field-btn btn btn-secondary btn-sm profile-token-copy" data-val="">copy</button>
+            </div>
+          </div>
         </div>
 
         <!-- Full env file -->
         <div class="card p-4">
           <div class="flex items-center justify-between mb-2">
             <div class="text-xs font-medium" style="color:var(--sub)">clawmarketer.env — copy everything below</div>
-            <button onclick="copyEnvFile()" class="btn btn-primary btn-sm">copy file</button>
+            <div class="flex gap-2">
+              <button onclick="toggleEnvReveal()" id="env-reveal-btn" class="btn btn-secondary btn-sm">show values</button>
+              <button onclick="copyEnvFile()" class="btn btn-primary btn-sm">copy file</button>
+            </div>
           </div>
           <pre id="env-preview" class="text-xs" style="color:#a5b4fc;white-space:pre;overflow-x:auto"></pre>
         </div>
@@ -968,10 +975,13 @@ window.showPanel = (panel) => {
   if (panel === 'profile') populateProfile();
 };
 
+const MASK = '••••••••••••••••';
+let _envRevealed = false;
+
 window.populateProfile = () => {
-  const uid   = window._uid   || '';
-  const token = _metaToken    || '';
-  const acct  = _accountId    || '';
+  const uid   = window._uid || '';
+  const token = _metaToken  || '';
+  const acct  = _accountId  || '';
 
   if (!uid) {
     document.getElementById('profile-no-auth').classList.remove('hidden');
@@ -981,15 +991,59 @@ window.populateProfile = () => {
   document.getElementById('profile-no-auth').classList.add('hidden');
   document.getElementById('profile-auth').classList.remove('hidden');
 
-  // Fill individual fields
-  document.querySelectorAll('.profile-uid').forEach(el => el.textContent = uid);
-  document.querySelectorAll('.profile-uid-copy').forEach(el => el.dataset.val = uid);
-  document.querySelectorAll('.profile-token').forEach(el => el.textContent = token ? token.slice(0,24)+'…' : 'not connected');
-  document.querySelectorAll('.profile-token-copy').forEach(el => el.dataset.val = token);
+  // Store real values on reveal buttons
+  document.querySelectorAll('.reveal-btn[data-field="uid"]').forEach(b => b.dataset.val = uid);
+  document.querySelectorAll('.reveal-btn[data-field="token"]').forEach(b => b.dataset.val = token || '');
+  document.querySelectorAll('.profile-uid-copy').forEach(b => b.dataset.val = uid);
+  document.querySelectorAll('.profile-token-copy').forEach(b => b.dataset.val = token);
   document.querySelectorAll('.profile-account').forEach(el => el.textContent = acct || '—');
-  document.querySelectorAll('.profile-account-copy').forEach(el => el.dataset.val = acct);
+  document.querySelectorAll('.profile-account-copy').forEach(b => b.dataset.val = acct);
 
-  // Build env file preview
+  // Reset to masked state
+  _envRevealed = false;
+  document.querySelectorAll('.profile-uid').forEach(el => el.textContent = MASK);
+  document.querySelectorAll('.profile-token').forEach(el => el.textContent = MASK);
+  document.querySelectorAll('.reveal-btn').forEach(b => { b.textContent = 'show'; b.dataset.revealed = '0'; });
+  document.getElementById('env-reveal-btn').textContent = 'show values';
+
+  buildEnvPreview(uid, token, acct, false);
+};
+
+function buildEnvPreview(uid, token, acct, revealed) {
+  const mask = s => revealed ? s : MASK;
+  const lines = [
+    `CLAWMARKETER_URL=https://clawmarketer.vercel.app`,
+    `CLAWMARKETER_USER_ID=${mask(uid)}`,
+    `META_ACCESS_TOKEN=${token ? mask(token) : ''}`,
+    `META_AD_ACCOUNT_ID=${acct}`,
+    ``,
+    `# Get from Vercel dashboard → Settings → Environment Variables`,
+    `GROQ_API_KEY=`,
+    ``,
+    `# Get from @BotFather on Telegram`,
+    `TELEGRAM_BOT_TOKEN=`,
+    `# Get from @userinfobot on Telegram`,
+    `TELEGRAM_CHAT_ID=`,
+    ``,
+    `DATA_DIR=~/Documents/data`,
+  ].join('\n');
+  document.getElementById('env-preview').textContent = lines;
+}
+
+window.toggleEnvReveal = () => {
+  _envRevealed = !_envRevealed;
+  const uid   = window._uid || '';
+  const token = _metaToken  || '';
+  const acct  = _accountId  || '';
+  buildEnvPreview(uid, token, acct, _envRevealed);
+  document.getElementById('env-reveal-btn').textContent = _envRevealed ? 'hide values' : 'show values';
+};
+
+window.copyEnvFile = () => {
+  // Always copy real values regardless of reveal state
+  const uid   = window._uid || '';
+  const token = _metaToken  || '';
+  const acct  = _accountId  || '';
   const lines = [
     `CLAWMARKETER_URL=https://clawmarketer.vercel.app`,
     `CLAWMARKETER_USER_ID=${uid}`,
@@ -1006,16 +1060,22 @@ window.populateProfile = () => {
     ``,
     `DATA_DIR=~/Documents/data`,
   ].join('\n');
-  document.getElementById('env-preview').textContent = lines;
-};
-
-window.copyEnvFile = () => {
-  const text = document.getElementById('env-preview').textContent;
-  navigator.clipboard.writeText(text);
+  navigator.clipboard.writeText(lines);
   showToast('Copied to clipboard!', 'success');
 };
 
 document.addEventListener('click', e => {
+  const reveal = e.target.closest('.reveal-btn');
+  if (reveal) {
+    const revealed = reveal.dataset.revealed === '1';
+    const field = reveal.dataset.field;
+    const val   = reveal.dataset.val;
+    const display = revealed ? MASK : val;
+    document.querySelectorAll(`.profile-${field}`).forEach(el => el.textContent = display);
+    reveal.textContent = revealed ? 'show' : 'hide';
+    reveal.dataset.revealed = revealed ? '0' : '1';
+    return;
+  }
   const btn = e.target.closest('.copy-field-btn');
   if (!btn) return;
   navigator.clipboard.writeText(btn.dataset.val || '');
