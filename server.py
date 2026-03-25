@@ -136,8 +136,6 @@ def meta_login(request: Request):
 def meta_callback(request: Request, code: str = None, state: str = None, error: str = None):
     if error:
         return RedirectResponse(f"/?error={error}")
-    if state != request.session.get("oauth_state"):
-        return RedirectResponse("/?error=invalid_state")
 
     # Exchange code for token
     resp = http.get(META_TOKEN_URL, params={
@@ -152,37 +150,36 @@ def meta_callback(request: Request, code: str = None, state: str = None, error: 
 
     access_token = token_data["access_token"]
 
-    # Extend to long-lived token (60 days)
+    # Extend to long-lived token (~60 days)
     extend_resp = http.get(META_TOKEN_URL, params={
-        "grant_type":    "fb_exchange_token",
-        "client_id":     META_APP_ID,
-        "client_secret": META_APP_SECRET,
+        "grant_type":        "fb_exchange_token",
+        "client_id":         META_APP_ID,
+        "client_secret":     META_APP_SECRET,
         "fb_exchange_token": access_token,
     })
     extended = extend_resp.json()
     if "access_token" in extended:
         access_token = extended["access_token"]
 
-    request.session["meta_token"] = access_token
-    request.session.pop("oauth_state", None)
-    return RedirectResponse("/?connected=1")
+    # Pass token to frontend via URL fragment — browser stores in localStorage.
+    # This avoids server-side session entirely (works on Vercel serverless).
+    return RedirectResponse(f"/?meta_token={access_token}")
 
 
 @app.get("/auth/status")
-def auth_status(request: Request):
-    token = request.session.get("meta_token")
+def auth_status(token: str = None):
+    """Check token validity and return ad accounts. Token passed as query param."""
     if not token:
         return {"connected": False}
 
-    # Fetch ad accounts
     resp = http.get(META_ACCOUNTS_URL, params={
         "access_token": token,
-        "fields": "id,name,account_status",
+        "fields": "id,name",
+        "limit": 20,
     })
     data = resp.json()
     if "error" in data:
-        request.session.pop("meta_token", None)
-        return {"connected": False}
+        return {"connected": False, "error": data["error"].get("message", "")}
 
     accounts = [
         {"id": a["id"], "name": a.get("name", a["id"])}
@@ -191,22 +188,9 @@ def auth_status(request: Request):
     return {"connected": True, "accounts": accounts}
 
 
-@app.get("/api/debug/meta")
-def debug_meta(request: Request):
-    """Temporary debug endpoint — remove before production."""
-    token = request.session.get("meta_token")
-    if not token:
-        return {"error": "no token in session"}
-    # Raw adaccounts response
-    r1 = http.get(META_ACCOUNTS_URL, params={"access_token": token, "fields": "id,name,account_status", "limit": 20})
-    # Also try /me to confirm token works
-    r2 = http.get("https://graph.facebook.com/v21.0/me", params={"access_token": token, "fields": "id,name"})
-    return {"adaccounts_raw": r1.json(), "me": r2.json(), "token_prefix": token[:20] + "..."}
-
-
 @app.post("/auth/disconnect")
-def disconnect(request: Request):
-    request.session.pop("meta_token", None)
+def disconnect():
+    # Token lives in browser localStorage — nothing to clear server-side
     return {"ok": True}
 
 
@@ -214,31 +198,27 @@ def disconnect(request: Request):
 
 class RunRequest(BaseModel):
     date_preset: str = "last_30d"
+    meta_token: Optional[str] = None
     account_id: Optional[str] = None
-
-def _get_first_ad_account(token: str) -> str:
-    """Auto-fetch the first ad account from the Meta token."""
-    resp = http.get(META_ACCOUNTS_URL, params={
-        "access_token": token,
-        "fields": "id",
-        "limit": 10,
-    })
-    data = resp.json()
-    accounts = [a["id"] for a in data.get("data", [])]
-    return accounts[0] if accounts else ""
 
 
 @app.post("/api/run")
-def run_live(request: Request, body: RunRequest):
-    token = request.session.get("meta_token")
+def run_live(body: RunRequest):
+    token = body.meta_token
     if not token:
         raise HTTPException(status_code=401, detail="Not connected to Meta. Please reconnect.")
 
-    account_id = body.account_id or os.getenv("META_AD_ACCOUNT_ID", "")
+    # Auto-fetch ad account — user never needs to provide this
+    account_id = body.account_id
     if not account_id:
-        account_id = _get_first_ad_account(token)
-    if not account_id:
-        raise HTTPException(status_code=400, detail="No ad account found. Please set META_AD_ACCOUNT_ID in Vercel env vars.")
+        resp = http.get(META_ACCOUNTS_URL, params={"access_token": token, "fields": "id", "limit": 10})
+        data = resp.json()
+        if "error" in data:
+            raise HTTPException(status_code=401, detail="Meta token expired. Please reconnect.")
+        accounts = [a["id"] for a in data.get("data", [])]
+        if not accounts:
+            raise HTTPException(status_code=400, detail="No Meta ad accounts found on this account.")
+        account_id = accounts[0]
 
     try:
         df_raw = fetcher.fetch(

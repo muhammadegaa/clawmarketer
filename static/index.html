@@ -552,16 +552,38 @@ if (auth) {
   });
 }
 
-// ── Meta status ──
-let _accountId = null;
+// ── Meta token — stored in localStorage, never on server ──
+let _metaToken  = localStorage.getItem('meta_token') || null;
+let _accountId  = null;
+
+// Pick up token from URL after OAuth redirect
+const _urlParams = new URLSearchParams(window.location.search);
+const _urlToken  = _urlParams.get('meta_token');
+if (_urlToken) {
+  _metaToken = _urlToken;
+  localStorage.setItem('meta_token', _metaToken);
+  // Clean URL
+  window.history.replaceState({}, '', '/');
+}
 
 async function checkMetaStatus() {
+  if (!_metaToken) {
+    document.getElementById('meta-not-connected').classList.remove('hidden');
+    document.getElementById('meta-connected').classList.add('hidden');
+    return;
+  }
   try {
-    const data = await fetch('/auth/status').then(r => r.json());
+    const data = await fetch(`/auth/status?token=${encodeURIComponent(_metaToken)}`).then(r => r.json());
     document.getElementById('meta-not-connected').classList.toggle('hidden', data.connected);
     document.getElementById('meta-connected').classList.toggle('hidden', !data.connected);
 
-    if (data.connected && data.accounts?.length) {
+    if (!data.connected) {
+      // Token expired — clear it
+      localStorage.removeItem('meta_token');
+      _metaToken = null;
+      return;
+    }
+    if (data.accounts?.length) {
       _accountId = data.accounts[0].id;
       const sel = document.getElementById('account-selector');
       if (sel) {
@@ -574,7 +596,11 @@ async function checkMetaStatus() {
     }
   } catch(e) {}
 }
+
 window.disconnectMeta = async () => {
+  localStorage.removeItem('meta_token');
+  _metaToken  = null;
+  _accountId  = null;
   await fetch('/auth/disconnect', { method: 'POST' });
   checkMetaStatus();
 };
@@ -736,7 +762,7 @@ window.runMetaOAuth = async () => {
   btn.disabled = true;
   btn.innerHTML = '<div class="spinner"></div> Running…';
   try {
-    const res  = await fetch('/api/run', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ date_preset: _preset, account_id: _accountId }) });
+    const res  = await fetch('/api/run', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ date_preset: _preset, account_id: _accountId, meta_token: _metaToken }) });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || 'Run failed');
     handleResult(data); showPanel('overview'); showToast('Analysis complete!', 'success');
