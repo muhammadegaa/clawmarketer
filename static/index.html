@@ -376,6 +376,10 @@
               <button onclick="disconnectMeta()" class="ml-auto text-xs" style="color:var(--sub)">Disconnect</button>
             </div>
             <div class="mb-4">
+              <label class="text-xs font-medium block mb-1.5" style="color:var(--sub)">Ad Account</label>
+              <select id="account-selector" class="input hidden mb-3" style="font-size:12px"></select>
+            </div>
+            <div class="mb-4">
               <label class="text-xs font-medium block mb-2" style="color:var(--sub)">Date Range</label>
               <div class="grid grid-cols-3 gap-2">
                 <button class="btn btn-secondary btn-sm date-preset" data-preset="last_7d">7 days</button>
@@ -549,11 +553,25 @@ if (auth) {
 }
 
 // ── Meta status ──
+let _accountId = null;
+
 async function checkMetaStatus() {
   try {
     const data = await fetch('/auth/status').then(r => r.json());
     document.getElementById('meta-not-connected').classList.toggle('hidden', data.connected);
     document.getElementById('meta-connected').classList.toggle('hidden', !data.connected);
+
+    if (data.connected && data.accounts?.length) {
+      _accountId = data.accounts[0].id;
+      const sel = document.getElementById('account-selector');
+      if (sel) {
+        sel.innerHTML = data.accounts.map(a =>
+          `<option value="${a.id}">${a.name} (${a.id})</option>`
+        ).join('');
+        sel.classList.toggle('hidden', data.accounts.length <= 1);
+        sel.onchange = () => { _accountId = sel.value; };
+      }
+    }
   } catch(e) {}
 }
 window.disconnectMeta = async () => {
@@ -718,7 +736,7 @@ window.runMetaOAuth = async () => {
   btn.disabled = true;
   btn.innerHTML = '<div class="spinner"></div> Running…';
   try {
-    const res  = await fetch('/api/run', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ date_preset: _preset }) });
+    const res  = await fetch('/api/run', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ date_preset: _preset, account_id: _accountId }) });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || 'Run failed');
     handleResult(data); showPanel('overview'); showToast('Analysis complete!', 'success');
