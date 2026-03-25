@@ -39,7 +39,7 @@ If the user specifies a range, edit the `run()` call at the bottom of openclaw_a
 - "last quarter" → `date_preset=last_quarter`
 
 ## Config
-All credentials are in `~/clawmarketer/clawmarketer.env`.
+All credentials are in `~/.openclaw/clawmarketer.env` (downloaded from the ClawMarketer dashboard profile page).
 If the script fails with a missing token error, tell the user to fill in that file.
 
 ## Response format

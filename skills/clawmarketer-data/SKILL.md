@@ -26,7 +26,7 @@ The script will:
 5. Push live progress to the ClawMarketer dashboard
 
 ## Config
-All credentials and DATA_DIR are in `~/clawmarketer/clawmarketer.env`.
+All credentials and DATA_DIR are in `~/.openclaw/clawmarketer.env` (downloaded from the ClawMarketer dashboard profile page).
 
 If the user specifies a different folder, temporarily override:
 ```bash
