@@ -11,11 +11,14 @@ user-invocable: true
 
 ## Instructions
 
-Run the Meta Ads analysis pipeline:
-
+Install dependencies (first time only):
 ```bash
-cd ~/clawmarketer
-python openclaw_agent.py
+pip install -r ~/.openclaw/workspace/skills/clawmarketer-meta/requirements.txt
+```
+
+Run the Meta Ads analysis pipeline:
+```bash
+python ~/.openclaw/workspace/skills/clawmarketer-meta/agent.py
 ```
 
 The script will:
@@ -27,19 +30,18 @@ The script will:
 6. Push live progress to the ClawMarketer dashboard
 
 ## Date range
-Parse the user's message for a time range and pass it:
+Parse the user's message for a time range. The `handle()` function auto-detects it.
 
-```bash
-python openclaw_agent.py  # defaults to last 30 days
+To run directly with a preset:
+```python
+# Edit the last line in agent.py, or call:
+import sys; sys.path.insert(0, '.'); from agent import run; run(date_preset='last_7d')
 ```
 
-If the user specifies a range, edit the `run()` call at the bottom of openclaw_agent.py or pass via env:
-- "last 7 days" → `date_preset=last_7d`
-- "last month" → `date_preset=last_month`
-- "last quarter" → `date_preset=last_quarter`
+Supported presets: `last_7d`, `last_14d`, `last_30d`, `last_month`, `this_month`, `last_quarter`
 
 ## Config
-All credentials are in `~/.openclaw/clawmarketer.env` (downloaded from the ClawMarketer dashboard profile page).
+All credentials are in `~/.openclaw/clawmarketer.env` (downloaded from the ClawMarketer dashboard).
 If the script fails with a missing token error, tell the user to fill in that file.
 
 ## Response format

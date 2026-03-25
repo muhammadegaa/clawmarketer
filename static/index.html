@@ -521,6 +521,68 @@
 </div>
 <!-- end page-app -->
 
+<!-- ── Setup Guide Modal ── -->
+<div id="modal-setup-guide" class="hidden" style="position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);padding:20px;">
+  <div class="card" style="max-width:560px;width:100%;padding:28px;position:relative;max-height:90vh;overflow-y:auto;">
+    <button onclick="closeSetupGuide()" style="position:absolute;top:14px;right:16px;background:none;border:none;color:var(--sub);font-size:18px;cursor:pointer;line-height:1;">✕</button>
+    <h2 style="font-size:17px;font-weight:700;margin-bottom:6px;">Set up your local agent</h2>
+    <p style="font-size:13px;color:var(--sub);margin-bottom:22px;">Run these steps once on your machine. Takes about 5 minutes.</p>
+
+    <div style="display:flex;flex-direction:column;gap:18px;">
+
+      <div style="display:flex;gap:14px;align-items:flex-start;">
+        <div style="width:26px;height:26px;border-radius:50%;background:var(--indigo);color:#fff;font-size:12px;font-weight:700;flex-shrink:0;display:flex;align-items:center;justify-content:center;">1</div>
+        <div>
+          <p style="font-size:13px;font-weight:600;margin-bottom:4px;">Install OpenClaw</p>
+          <p style="font-size:12px;color:var(--sub);margin-bottom:8px;">OpenClaw runs AI agents locally and connects them to your Telegram bot.</p>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-family:monospace;font-size:12px;display:flex;justify-content:space-between;align-items:center;">
+            <span id="sgcmd1" style="color:#a5b4fc;">curl -sSL https://openclaw.dev/install.sh | bash</span>
+            <button class="btn btn-ghost btn-sm" onclick="copySGCmd('sgcmd1')" style="margin-left:10px;flex-shrink:0;">Copy</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:14px;align-items:flex-start;">
+        <div style="width:26px;height:26px;border-radius:50%;background:var(--indigo);color:#fff;font-size:12px;font-weight:700;flex-shrink:0;display:flex;align-items:center;justify-content:center;">2</div>
+        <div>
+          <p style="font-size:13px;font-weight:600;margin-bottom:4px;">Download your config file</p>
+          <p style="font-size:12px;color:var(--sub);margin-bottom:8px;">Go to <strong style="color:var(--text);">Integrations → Download .env</strong> (or your profile page) and save it to:</p>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-family:monospace;font-size:12px;">
+            <span style="color:#4ade80;">~/.openclaw/clawmarketer.env</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:14px;align-items:flex-start;">
+        <div style="width:26px;height:26px;border-radius:50%;background:var(--indigo);color:#fff;font-size:12px;font-weight:700;flex-shrink:0;display:flex;align-items:center;justify-content:center;">3</div>
+        <div>
+          <p style="font-size:13px;font-weight:600;margin-bottom:4px;">Install ClawMarketer skills</p>
+          <p style="font-size:12px;color:var(--sub);margin-bottom:8px;">Install the Meta Ads skill (and optionally the Data Cleaner):</p>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-family:monospace;font-size:12px;display:flex;justify-content:space-between;align-items:center;">
+            <span id="sgcmd2" style="color:#a5b4fc;">openclaw skill install clawmarketer-meta</span>
+            <button class="btn btn-ghost btn-sm" onclick="copySGCmd('sgcmd2')" style="margin-left:10px;flex-shrink:0;">Copy</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:14px;align-items:flex-start;">
+        <div style="width:26px;height:26px;border-radius:50%;background:var(--indigo);color:#fff;font-size:12px;font-weight:700;flex-shrink:0;display:flex;align-items:center;justify-content:center;">4</div>
+        <div>
+          <p style="font-size:13px;font-weight:600;margin-bottom:4px;">Start OpenClaw</p>
+          <p style="font-size:12px;color:var(--sub);margin-bottom:8px;">Then send a message to your Telegram bot to trigger your first run:</p>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-family:monospace;font-size:12px;color:#fbbf24;">analyze my ads</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div style="margin-top:22px;padding-top:18px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+      <p style="font-size:12px;color:var(--sub);">Questions? Check the <a href="https://openclaw.dev/docs" target="_blank" style="color:var(--indigo);">OpenClaw docs</a>.</p>
+      <button class="btn btn-primary btn-sm" onclick="closeSetupGuide();toggleChecklistItem(1);">Mark as done</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 // ─────────────────────────────────────────────
 // Imports
@@ -853,6 +915,13 @@ window.copyCmd = async function(cmd) {
   toast(`Copied: "${cmd}"`, 'success');
 };
 
+window.copySGCmd = async function(elId) {
+  const text = document.getElementById(elId)?.textContent?.trim();
+  if (!text) return;
+  await navigator.clipboard.writeText(text).catch(() => {});
+  toast('Copied!', 'success');
+};
+
 window.runDemo = async function() {
   const btn = document.getElementById('btn-demo');
   if (btn) { btn.disabled = true; btn.textContent = 'Loading demo…'; }
@@ -974,26 +1043,52 @@ function loadDashboard(user) {
 // ─────────────────────────────────────────────
 // Setup checklist
 // ─────────────────────────────────────────────
+function _checklistManual(idx) {
+  const key = `cm_checklist_manual_${_uid}`;
+  try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch { return {}; }
+}
+
+window.toggleChecklistItem = function(idx) {
+  if (!_uid) return;
+  const key = `cm_checklist_manual_${_uid}`;
+  const manual = _checklistManual();
+  manual[idx] = !manual[idx];
+  localStorage.setItem(key, JSON.stringify(manual));
+  // Re-render with last known runs
+  renderChecklist(window._lastRuns || []);
+};
+
+window.showSetupGuide = function() {
+  document.getElementById('modal-setup-guide').classList.remove('hidden');
+};
+
+window.closeSetupGuide = function() {
+  document.getElementById('modal-setup-guide').classList.add('hidden');
+};
+
 function renderChecklist(runs) {
+  window._lastRuns = runs;
   const el = document.getElementById('setup-checklist');
   if (!el) return;
-  // Don't show if user dismissed
   if (localStorage.getItem(`cm_checklist_dismissed_${_uid}`)) { el.style.display = 'none'; return; }
+
+  const manual = _checklistManual();
+  const hasRealRun = runs.some(r => r.triggered_by !== 'demo');
 
   const steps = [
     {
       label: 'Connect Meta Ads',
-      done: !!_metaToken,
-      action: !_metaToken ? `<button class="btn btn-primary btn-sm" onclick="switchTab('integrations')">Connect →</button>` : null,
+      done: !!_metaToken || !!manual[0],
+      action: !_metaToken && !manual[0] ? `<button class="btn btn-primary btn-sm" onclick="switchTab('integrations')">Connect →</button>` : null,
     },
     {
-      label: 'Set up your local agent (OpenClaw + skills)',
-      done: runs.length > 0,
-      action: runs.length === 0 ? `<button class="btn btn-secondary btn-sm" onclick="switchTab('agents')">Setup guide →</button>` : null,
+      label: 'Install OpenClaw + skills on your machine',
+      done: runs.length > 0 || !!manual[1],
+      action: (runs.length === 0 && !manual[1]) ? `<button class="btn btn-secondary btn-sm" onclick="showSetupGuide()">Setup guide →</button>` : null,
     },
     {
       label: 'Run your first agent via Telegram',
-      done: runs.some(r => r.triggered_by !== 'demo'),
+      done: hasRealRun || !!manual[2],
       action: null,
     },
   ];
@@ -1002,10 +1097,11 @@ function renderChecklist(runs) {
   if (allDone) { el.style.display = 'none'; return; }
   el.style.display = '';
 
-  document.getElementById('checklist-items').innerHTML = steps.map(s => `
+  document.getElementById('checklist-items').innerHTML = steps.map((s, i) => `
     <div style="display:flex;align-items:center;gap:10px;">
-      <div style="width:18px;height:18px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;
-        background:${s.done ? 'rgba(34,197,94,.15)' : 'var(--border2)'};border:1px solid ${s.done ? 'rgba(34,197,94,.3)' : 'var(--border2)'};font-size:10px;">
+      <div onclick="toggleChecklistItem(${i})" style="width:18px;height:18px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;
+        background:${s.done ? 'rgba(34,197,94,.15)' : 'var(--border2)'};border:1px solid ${s.done ? 'rgba(34,197,94,.3)' : 'var(--border2)'};font-size:10px;transition:all .15s;"
+        title="${s.done ? 'Mark as undone' : 'Mark as done'}">
         ${s.done ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
       </div>
       <span style="flex:1;font-size:13px;color:${s.done ? 'var(--sub)' : 'var(--text)'};${s.done ? 'text-decoration:line-through;' : ''}">${s.label}</span>
@@ -1062,7 +1158,8 @@ function renderLastRun(run) {
       <div class="empty-state">
         <div class="empty-icon">&#9881;</div>
         <p style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:6px;">No runs yet</p>
-        <p style="font-size:13px;color:var(--sub);">Trigger your agent via Telegram or click "Run now" below.</p>
+        <p style="font-size:13px;color:var(--sub);margin-bottom:16px;">Trigger your first agent via Telegram, or load demo data to see how it works.</p>
+        <button class="btn btn-secondary" onclick="runDemo()" style="margin:0 auto;">Try with demo data</button>
       </div>`;
     timeEl.textContent = '';
     return;
@@ -1101,8 +1198,9 @@ function renderLastRun(run) {
     </div>
     <div>${stageHtml}</div>`;
 
-  // Update agent last-run text
-  document.getElementById('agent-meta-last-run').textContent = run.updated_at ? `Last run: ${timeEl.textContent}` : 'No runs yet';
+  // Update agent last-run text (element may not exist if grid hasn't rendered yet)
+  const agentLastRunEl = document.getElementById('agent-meta-last-run');
+  if (agentLastRunEl) agentLastRunEl.textContent = run.updated_at ? `Last run: ${timeEl.textContent}` : 'No runs yet';
 }
 
 const SKILL_META = {

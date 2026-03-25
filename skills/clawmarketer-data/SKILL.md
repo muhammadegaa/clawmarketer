@@ -11,11 +11,14 @@ user-invocable: true
 
 ## Instructions
 
-Run the data cleansing pipeline:
-
+Install dependencies (first time only):
 ```bash
-cd ~/clawmarketer
-python openclaw_data_agent.py
+pip install -r ~/.openclaw/workspace/skills/clawmarketer-data/requirements.txt
+```
+
+Run the data cleansing pipeline:
+```bash
+python ~/.openclaw/workspace/skills/clawmarketer-data/agent.py
 ```
 
 The script will:
@@ -26,11 +29,12 @@ The script will:
 5. Push live progress to the ClawMarketer dashboard
 
 ## Config
-All credentials and DATA_DIR are in `~/.openclaw/clawmarketer.env` (downloaded from the ClawMarketer dashboard profile page).
+All credentials and DATA_DIR are in `~/.openclaw/clawmarketer.env` (downloaded from the ClawMarketer dashboard).
 
-If the user specifies a different folder, temporarily override:
+If the user specifies a different folder, the `handle()` function auto-detects "in ~/path" from the message.
+To override manually:
 ```bash
-DATA_DIR=~/path/to/folder python openclaw_data_agent.py
+DATA_DIR=~/path/to/folder python ~/.openclaw/workspace/skills/clawmarketer-data/agent.py
 ```
 
 ## Response format
