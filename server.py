@@ -203,6 +203,60 @@ def disconnect():
     return {"ok": True}
 
 
+@app.get("/api/debug/meta")
+def debug_meta(token: str = None):
+    """Inspect what a Meta token can actually see — accounts, campaigns, insights."""
+    if not token:
+        return {"error": "Pass ?token=YOUR_TOKEN"}
+
+    base = "https://graph.facebook.com/v21.0"
+    out = {}
+
+    # 1. Token identity
+    me = http.get(f"{base}/me", params={"access_token": token, "fields": "id,name"}).json()
+    out["me"] = me
+
+    # 2. All ad account endpoints
+    for key, path in [
+        ("adaccounts",          f"{base}/me/adaccounts"),
+        ("assigned_adaccounts", f"{base}/me/assigned_ad_accounts"),
+        ("personal_adaccounts", f"{base}/me/personal_ad_accounts"),
+    ]:
+        r = http.get(path, params={"access_token": token, "fields": "id,name,account_status", "limit": 20}).json()
+        out[key] = r
+
+    # 3. For the first account found, list campaigns + try insights with wide date range
+    accounts = _fetch_ad_accounts(token)
+    out["accounts_found"] = accounts
+    if accounts:
+        act = accounts[0]["id"]
+        if not act.startswith("act_"):
+            act = f"act_{act}"
+
+        # List campaigns (no spend required)
+        campaigns = http.get(f"{base}/{act}/campaigns", params={
+            "access_token": token,
+            "fields": "id,name,status,objective",
+            "limit": 20,
+        }).json()
+        out["campaigns"] = campaigns
+
+        # Try insights with last_year to find any historical data
+        for preset in ["last_30d", "last_90d", "last_year"]:
+            ins = http.get(f"{base}/{act}/insights", params={
+                "access_token": token,
+                "fields": "campaign_name,impressions,spend,clicks",
+                "level": "campaign",
+                "date_preset": preset,
+                "limit": 5,
+            }).json()
+            out[f"insights_{preset}"] = ins
+            if ins.get("data"):
+                break  # found data, no need to go wider
+
+    return out
+
+
 # ── Run pipeline with live Meta data ─────────────────────────────────────────
 
 class RunRequest(BaseModel):
