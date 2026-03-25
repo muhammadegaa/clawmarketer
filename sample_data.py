@@ -45,7 +45,7 @@ def make_row(campaign_name, objective, date_start, date_end):
     }
 
 
-def generate(output_path: str = "sample_meta_ads.csv"):
+def generate(output_path: str = "/tmp/sample_meta_ads.csv"):
     rows = []
     for name, obj in CAMPAIGNS:
         # Multiple date ranges to simulate weekly data
