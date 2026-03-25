@@ -235,7 +235,10 @@ def run_live(body: RunRequest):
         raise HTTPException(status_code=400, detail=f"Meta API error: {str(e)}")
 
     if df_raw.empty:
-        raise HTTPException(status_code=404, detail="No data returned for this account and date range.")
+        raise HTTPException(
+            status_code=404,
+            detail="No campaign data found for this date range. Your Meta Ads account may not have any active or historical campaigns yet. Try the Demo mode to see how the platform works."
+        )
 
     return _run_pipeline(df_raw, os.getenv("GROQ_API_KEY", ""))
 

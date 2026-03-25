@@ -761,6 +761,10 @@ window.runMetaOAuth = async () => {
   try {
     const res  = await fetch('/api/run', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ date_preset: _preset, account_id: _accountId, meta_token: _metaToken }) });
     const data = await res.json();
+    if (res.status === 404) {
+      showToast('No campaigns found in this date range — try Demo mode to see the platform in action.', 'info');
+      return;
+    }
     if (!res.ok) throw new Error(data.detail || 'Run failed');
     handleResult(data); showPanel('overview'); showToast('Analysis complete!', 'success');
   } catch(e) { showToast(e.message, 'error'); }

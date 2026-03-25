@@ -136,7 +136,7 @@ def fetch(
     raw_rows = _paginate(url, params)
 
     if not raw_rows:
-        raise ValueError("No data returned. Check your date range or account ID.")
+        return pd.DataFrame()
 
     rows = []
     for r in raw_rows:
