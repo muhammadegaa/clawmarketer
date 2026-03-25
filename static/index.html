@@ -144,6 +144,10 @@
       <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 3"/></svg>
       Setup Guide
     </a>
+    <div class="nav-item" id="nav-profile" onclick="showPanel('profile')">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      My Config
+    </div>
 
 <div class="text-xs font-semibold mt-5 mb-2 px-2" style="color:var(--sub2);letter-spacing:.08em">AGENTS</div>
     <div class="nav-item" id="nav-meta-agent" onclick="showPanel('meta')">
@@ -491,6 +495,73 @@
         <svg width="16" height="16" fill="none" stroke="#4ade80" stroke-width="2" viewBox="0 0 24 24" class="mt-0.5 flex-shrink-0"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4 20-7z"/></svg>
         <div class="text-xs" style="color:var(--sub)">
           <span class="font-medium" style="color:#4ade80">Runs on your machine:</span> Set <code class="mx-1 px-1.5 py-0.5 rounded" style="background:var(--border);color:var(--text)">DATA_DIR</code> in <code class="px-1.5 py-0.5 rounded" style="background:var(--border);color:var(--text)">clawmarketer.env</code> to point at your data folder.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile panel -->
+  <div id="panel-profile" class="hidden p-6">
+    <div class="max-w-2xl">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:rgba(99,102,241,.1)">
+          <svg width="18" height="18" fill="none" stroke="#a5b4fc" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        </div>
+        <div>
+          <h2 class="font-bold">My Config</h2>
+          <p class="text-xs mt-0.5" style="color:var(--sub)">Copy these values into your local <code style="color:var(--text)">clawmarketer.env</code></p>
+        </div>
+      </div>
+
+      <div id="profile-no-auth" class="card p-5 text-sm" style="color:var(--sub)">
+        Sign in to see your config.
+      </div>
+
+      <div id="profile-auth" class="hidden space-y-3">
+
+        <!-- Individual fields -->
+        <div class="card p-4 space-y-3">
+          <div>
+            <div class="text-xs font-medium mb-1" style="color:var(--sub)">CLAWMARKETER_URL</div>
+            <div class="flex items-center gap-2">
+              <code class="flex-1 text-xs px-3 py-2 rounded" style="background:var(--border);color:#a5b4fc">https://clawmarketer.vercel.app</code>
+              <button class="copy-field-btn btn btn-secondary btn-sm" data-val="https://clawmarketer.vercel.app">copy</button>
+            </div>
+          </div>
+          <div>
+            <div class="text-xs font-medium mb-1" style="color:var(--sub)">CLAWMARKETER_USER_ID</div>
+            <div class="flex items-center gap-2">
+              <code class="flex-1 text-xs px-3 py-2 rounded profile-uid" style="background:var(--border);color:#a5b4fc">—</code>
+              <button class="copy-field-btn btn btn-secondary btn-sm profile-uid-copy" data-val="">copy</button>
+            </div>
+          </div>
+          <div>
+            <div class="text-xs font-medium mb-1" style="color:var(--sub)">META_ACCESS_TOKEN</div>
+            <div class="flex items-center gap-2">
+              <code class="flex-1 text-xs px-3 py-2 rounded truncate profile-token" style="background:var(--border);color:#a5b4fc">not connected</code>
+              <button class="copy-field-btn btn btn-secondary btn-sm profile-token-copy" data-val="">copy</button>
+            </div>
+          </div>
+          <div>
+            <div class="text-xs font-medium mb-1" style="color:var(--sub)">META_AD_ACCOUNT_ID</div>
+            <div class="flex items-center gap-2">
+              <code class="flex-1 text-xs px-3 py-2 rounded profile-account" style="background:var(--border);color:#a5b4fc">—</code>
+              <button class="copy-field-btn btn btn-secondary btn-sm profile-account-copy" data-val="">copy</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Full env file -->
+        <div class="card p-4">
+          <div class="flex items-center justify-between mb-2">
+            <div class="text-xs font-medium" style="color:var(--sub)">clawmarketer.env — copy everything below</div>
+            <button onclick="copyEnvFile()" class="btn btn-primary btn-sm">copy file</button>
+          </div>
+          <pre id="env-preview" class="text-xs" style="color:#a5b4fc;white-space:pre;overflow-x:auto"></pre>
+        </div>
+
+        <div class="card-sm p-3 text-xs" style="color:var(--sub)">
+          Still need to add: <code style="color:var(--text)">GROQ_API_KEY</code>, <code style="color:var(--text)">TELEGRAM_BOT_TOKEN</code>, <code style="color:var(--text)">TELEGRAM_CHAT_ID</code> — get these from Vercel env vars and @BotFather.
         </div>
       </div>
     </div>
@@ -882,18 +953,76 @@ window.onDrop = (e) => {
 
 // ── Panel routing ──
 window.showPanel = (panel) => {
-  ['overview','meta','data'].forEach(p => document.getElementById(`panel-${p}`).classList.toggle('hidden', p !== panel));
-  ['dashboard','meta-agent','data-agent'].forEach(n => document.getElementById(`nav-${n}`)?.classList.remove('active'));
-  const navMap = { overview:'dashboard', meta:'meta-agent', data:'data-agent' };
+  ['overview','meta','data','profile'].forEach(p => document.getElementById(`panel-${p}`).classList.toggle('hidden', p !== panel));
+  ['dashboard','meta-agent','data-agent','profile'].forEach(n => document.getElementById(`nav-${n}`)?.classList.remove('active'));
+  const navMap = { overview:'dashboard', meta:'meta-agent', data:'data-agent', profile:'profile' };
   document.getElementById(`nav-${navMap[panel]}`)?.classList.add('active');
   const titles = {
     overview: ['Agent Dashboard','Run agents via Telegram or directly here'],
     meta:     ['Meta Ads Agent','Analyze campaign performance and generate reports'],
     data:     ['Data Cleansing Agent','Scan, clean and export local CSV/Excel files'],
+    profile:  ['My Config','Copy these values into your local clawmarketer.env'],
   };
   document.getElementById('page-title').textContent = titles[panel][0];
   document.getElementById('page-sub').textContent   = titles[panel][1];
+  if (panel === 'profile') populateProfile();
 };
+
+window.populateProfile = () => {
+  const uid   = window._uid   || '';
+  const token = _metaToken    || '';
+  const acct  = _accountId    || '';
+
+  if (!uid) {
+    document.getElementById('profile-no-auth').classList.remove('hidden');
+    document.getElementById('profile-auth').classList.add('hidden');
+    return;
+  }
+  document.getElementById('profile-no-auth').classList.add('hidden');
+  document.getElementById('profile-auth').classList.remove('hidden');
+
+  // Fill individual fields
+  document.querySelectorAll('.profile-uid').forEach(el => el.textContent = uid);
+  document.querySelectorAll('.profile-uid-copy').forEach(el => el.dataset.val = uid);
+  document.querySelectorAll('.profile-token').forEach(el => el.textContent = token ? token.slice(0,24)+'…' : 'not connected');
+  document.querySelectorAll('.profile-token-copy').forEach(el => el.dataset.val = token);
+  document.querySelectorAll('.profile-account').forEach(el => el.textContent = acct || '—');
+  document.querySelectorAll('.profile-account-copy').forEach(el => el.dataset.val = acct);
+
+  // Build env file preview
+  const lines = [
+    `CLAWMARKETER_URL=https://clawmarketer.vercel.app`,
+    `CLAWMARKETER_USER_ID=${uid}`,
+    `META_ACCESS_TOKEN=${token}`,
+    `META_AD_ACCOUNT_ID=${acct}`,
+    ``,
+    `# Get from Vercel dashboard → Settings → Environment Variables`,
+    `GROQ_API_KEY=`,
+    ``,
+    `# Get from @BotFather on Telegram`,
+    `TELEGRAM_BOT_TOKEN=`,
+    `# Get from @userinfobot on Telegram`,
+    `TELEGRAM_CHAT_ID=`,
+    ``,
+    `DATA_DIR=~/Documents/data`,
+  ].join('\n');
+  document.getElementById('env-preview').textContent = lines;
+};
+
+window.copyEnvFile = () => {
+  const text = document.getElementById('env-preview').textContent;
+  navigator.clipboard.writeText(text);
+  showToast('Copied to clipboard!', 'success');
+};
+
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.copy-field-btn');
+  if (!btn) return;
+  navigator.clipboard.writeText(btn.dataset.val || '');
+  const orig = btn.textContent;
+  btn.textContent = 'copied!';
+  setTimeout(() => btn.textContent = orig, 1500);
+});
 
 window.switchTab = (e, tab) => {
   ['campaigns','anomalies','report'].forEach(t => document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tab));
