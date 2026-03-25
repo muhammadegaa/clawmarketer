@@ -14,12 +14,12 @@ def _url(token: str, method: str) -> str:
     return TELEGRAM_API.format(token=token, method=method)
 
 
-def send_message(text: str, token: str = None, chat_id: str = None, parse_mode: str = "Markdown"):
+def send_message(text: str, token: str = None, chat_id: str = None, parse_mode: str = "Markdown") -> Optional[int]:
     token   = token   or os.getenv("TELEGRAM_BOT_TOKEN", "")
     chat_id = chat_id or os.getenv("TELEGRAM_CHAT_ID", "")
     if not token or not chat_id:
         print("[Telegram] Not configured — skipping message")
-        return
+        return None
 
     resp = requests.post(_url(token, "sendMessage"), json={
         "chat_id":    chat_id,
@@ -29,13 +29,15 @@ def send_message(text: str, token: str = None, chat_id: str = None, parse_mode: 
 
     if not resp.ok:
         print(f"[Telegram] sendMessage failed: {resp.text[:200]}")
+        return None
+    return resp.json().get("result", {}).get("message_id")
 
 
-def send_photo(photo_path: str, caption: str = "", token: str = None, chat_id: str = None):
+def send_photo(photo_path: str, caption: str = "", token: str = None, chat_id: str = None) -> Optional[int]:
     token   = token   or os.getenv("TELEGRAM_BOT_TOKEN", "")
     chat_id = chat_id or os.getenv("TELEGRAM_CHAT_ID", "")
     if not token or not chat_id:
-        return
+        return None
 
     with open(photo_path, "rb") as f:
         resp = requests.post(_url(token, "sendPhoto"), data={
@@ -46,13 +48,15 @@ def send_photo(photo_path: str, caption: str = "", token: str = None, chat_id: s
 
     if not resp.ok:
         print(f"[Telegram] sendPhoto failed: {resp.text[:200]}")
+        return None
+    return resp.json().get("result", {}).get("message_id")
 
 
-def send_document(file_path: str, caption: str = "", token: str = None, chat_id: str = None):
+def send_document(file_path: str, caption: str = "", token: str = None, chat_id: str = None) -> Optional[int]:
     token   = token   or os.getenv("TELEGRAM_BOT_TOKEN", "")
     chat_id = chat_id or os.getenv("TELEGRAM_CHAT_ID", "")
     if not token or not chat_id:
-        return
+        return None
 
     with open(file_path, "rb") as f:
         resp = requests.post(_url(token, "sendDocument"), data={
@@ -63,6 +67,8 @@ def send_document(file_path: str, caption: str = "", token: str = None, chat_id:
 
     if not resp.ok:
         print(f"[Telegram] sendDocument failed: {resp.text[:200]}")
+        return None
+    return resp.json().get("result", {}).get("message_id")
 
 
 def send_report_bundle(summary: str, chart_paths: list, csv_path: Optional[str] = None,

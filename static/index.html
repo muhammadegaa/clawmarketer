@@ -127,6 +127,8 @@
     /* App layout */
     #page-app { padding-top: 56px; min-height: 100vh; }
     .app-content { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+    .dash-two-col { display: grid; grid-template-columns: 1fr 340px; gap: 20px; align-items: start; }
+    .stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 28px; }
 
     /* Stat cards */
     .stat-card { padding: 22px; }
@@ -227,6 +229,20 @@
     /* Empty state */
     .empty-state { text-align: center; padding: 56px 24px; }
     .empty-icon { font-size: 32px; margin-bottom: 14px; filter: grayscale(1); opacity: .4; }
+    /* ── Mobile ─────────────────────────────────────────── */
+    @media (max-width: 639px) {
+      #topnav { padding: 0 14px; }
+      .nav-user-name { display: none; }
+      .nav-tabs { gap: 0; }
+      .nav-tab { padding: 6px 10px; font-size: 12px; }
+      .app-content { padding: 20px 14px; }
+      .stats-grid { grid-template-columns: repeat(2,1fr) !important; gap: 10px; }
+      .dash-two-col { grid-template-columns: 1fr !important; }
+      .signin-card { padding: 36px 22px; }
+      .wizard-card { padding: 0 4px; }
+      .runs-table th:nth-child(1),
+      .runs-table td:nth-child(1) { display: none; }
+    }
   </style>
 </head>
 <body>
@@ -402,7 +418,7 @@
     </div>
 
     <!-- Stats row -->
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px;" id="stats-grid">
+    <div class="stats-grid" id="stats-grid">
       <div class="card stat-card">
         <div class="stat-label">Total Spend</div>
         <div class="stat-value" id="stat-spend">—</div>
@@ -422,7 +438,7 @@
     </div>
 
     <!-- Two-column layout -->
-    <div style="display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start;">
+    <div class="dash-two-col">
 
       <!-- Last run -->
       <div class="card" style="padding:22px;">
@@ -439,29 +455,12 @@
         </div>
       </div>
 
-      <!-- Quick actions -->
+      <!-- Trigger via Telegram -->
       <div style="display:flex;flex-direction:column;gap:14px;">
         <div class="card" style="padding:22px;">
-          <h2 style="font-size:15px;font-weight:600;margin-bottom:14px;">Quick Actions</h2>
-          <div style="display:flex;flex-direction:column;gap:10px;">
-            <button class="btn btn-primary" style="justify-content:center;" onclick="runAgent()" id="btn-run">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-              Run Meta Ads Agent
-            </button>
-            <button class="btn btn-secondary" style="justify-content:center;" onclick="runDemo()" id="btn-demo">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-              Run Demo
-            </button>
-          </div>
-        </div>
-
-        <div class="card" style="padding:22px;">
-          <h2 style="font-size:15px;font-weight:600;margin-bottom:6px;">Telegram Trigger</h2>
-          <p style="font-size:13px;color:var(--sub);margin-bottom:12px;">Send a message to your bot:</p>
-          <div style="display:flex;flex-direction:column;gap:7px;">
-            <div style="background:var(--border);border-radius:7px;padding:8px 12px;font-family:monospace;font-size:12px;color:#a5b4fc;">analyze my ads</div>
-            <div style="background:var(--border);border-radius:7px;padding:8px 12px;font-family:monospace;font-size:12px;color:#a5b4fc;">clean my data</div>
-          </div>
+          <h2 style="font-size:15px;font-weight:600;margin-bottom:4px;">Trigger an agent</h2>
+          <p style="font-size:13px;color:var(--sub);margin-bottom:14px;">Send one of these to your OpenClaw bot on Telegram. Results will appear here.</p>
+          <div style="display:flex;flex-direction:column;gap:8px;" id="trigger-cmds"></div>
         </div>
       </div>
     </div>
@@ -471,107 +470,14 @@
   <div id="tab-agents" class="app-content hidden">
     <div style="margin-bottom:28px;">
       <h1 style="font-size:22px;font-weight:700;margin-bottom:4px;">Agents</h1>
-      <p style="color:var(--sub);font-size:14px;">Manage and run your marketing automation agents.</p>
+      <p style="color:var(--sub);font-size:14px;">Agents that have run on your machine. Trigger them via Telegram.</p>
     </div>
-
-    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;" id="agents-grid">
-
-      <!-- Meta Ads Analyzer -->
-      <div class="card agent-card">
-        <div style="display:flex;align-items:flex-start;gap:14px;">
-          <div class="agent-icon-wrap" style="background:rgba(99,102,241,.15);">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a5b4fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-          </div>
-          <div style="flex:1;min-width:0;">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-              <h3 style="font-size:15px;font-weight:600;">Meta Ads Analyzer</h3>
-              <div style="display:flex;align-items:center;gap:5px;">
-                <div class="dot dot-green" id="agent-meta-dot"></div>
-                <span style="font-size:11px;color:var(--green);font-weight:500;" id="agent-meta-status">Active</span>
-              </div>
-            </div>
-            <p style="font-size:13px;color:var(--sub);line-height:1.5;">Analyze campaign performance, detect anomalies, generate AI reports.</p>
-          </div>
-        </div>
-        <div class="divider"></div>
-        <div style="display:flex;align-items:center;justify-content:space-between;">
-          <span style="font-size:12px;color:var(--sub);" id="agent-meta-last-run">No runs yet</span>
-          <button class="btn btn-primary btn-sm" onclick="runAgent()">Run now</button>
-        </div>
-        <div style="background:var(--border);border-radius:6px;padding:7px 11px;font-family:monospace;font-size:12px;color:var(--sub);">
-          Telegram: <span style="color:#a5b4fc;">analyze my ads</span>
-        </div>
+    <div id="agents-grid" style="display:flex;flex-direction:column;gap:12px;">
+      <div class="empty-state">
+        <div class="empty-icon">&#129302;</div>
+        <p style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:6px;">No agents have run yet</p>
+        <p style="font-size:13px;color:var(--sub);">Trigger one via Telegram — it will appear here after its first run.</p>
       </div>
-
-      <!-- Data Cleansing -->
-      <div class="card agent-card">
-        <div style="display:flex;align-items:flex-start;gap:14px;">
-          <div class="agent-icon-wrap" style="background:rgba(34,197,94,.12);">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-          </div>
-          <div style="flex:1;min-width:0;">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-              <h3 style="font-size:15px;font-weight:600;">Data Cleansing</h3>
-              <div style="display:flex;align-items:center;gap:5px;">
-                <div class="dot dot-green"></div>
-                <span style="font-size:11px;color:var(--green);font-weight:500;">Active</span>
-              </div>
-            </div>
-            <p style="font-size:13px;color:var(--sub);line-height:1.5;">Scan local CSV/Excel files, remove duplicates, normalize columns.</p>
-          </div>
-        </div>
-        <div class="divider"></div>
-        <div style="display:flex;align-items:center;justify-content:space-between;">
-          <span style="font-size:12px;color:var(--sub);">No runs yet</span>
-          <button class="btn btn-secondary btn-sm">Run now</button>
-        </div>
-        <div style="background:var(--border);border-radius:6px;padding:7px 11px;font-family:monospace;font-size:12px;color:var(--sub);">
-          Telegram: <span style="color:#a5b4fc;">clean my data</span>
-        </div>
-      </div>
-
-      <!-- Content Scheduler -->
-      <div class="card agent-card" style="opacity:.6;">
-        <span class="coming-soon-badge">Coming soon</span>
-        <div style="display:flex;align-items:flex-start;gap:14px;">
-          <div class="agent-icon-wrap" style="background:rgba(234,179,8,.1);">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-          </div>
-          <div style="flex:1;min-width:0;">
-            <h3 style="font-size:15px;font-weight:600;margin-bottom:4px;">Content Scheduler</h3>
-            <p style="font-size:13px;color:var(--sub);line-height:1.5;">Schedule and publish social posts based on ad performance.</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Competitor Monitor -->
-      <div class="card agent-card" style="opacity:.6;">
-        <span class="coming-soon-badge">Coming soon</span>
-        <div style="display:flex;align-items:flex-start;gap:14px;">
-          <div class="agent-icon-wrap" style="background:rgba(168,85,247,.12);">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-          </div>
-          <div style="flex:1;min-width:0;">
-            <h3 style="font-size:15px;font-weight:600;margin-bottom:4px;">Competitor Monitor</h3>
-            <p style="font-size:13px;color:var(--sub);line-height:1.5;">Track competitor ads and surface strategic insights weekly.</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Email Performance -->
-      <div class="card agent-card" style="opacity:.6;">
-        <span class="coming-soon-badge">Coming soon</span>
-        <div style="display:flex;align-items:flex-start;gap:14px;">
-          <div class="agent-icon-wrap" style="background:rgba(59,130,246,.12);">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-          </div>
-          <div style="flex:1;min-width:0;">
-            <h3 style="font-size:15px;font-weight:600;margin-bottom:4px;">Email Performance</h3>
-            <p style="font-size:13px;color:var(--sub);line-height:1.5;">Connect your ESP and analyze open rates, clicks, and revenue.</p>
-          </div>
-        </div>
-      </div>
-
     </div>
   </div>
 
@@ -880,30 +786,32 @@ window.copySetupPrompt = async function() {
 };
 
 // ─────────────────────────────────────────────
-// Run agent
+// Trigger commands
 // ─────────────────────────────────────────────
-window.runAgent = async function() {
-  const btn = document.getElementById('btn-run');
-  btn.disabled = true;
-  btn.innerHTML = '<div class="spinner"></div> Running...';
-  try {
-    const res = await fetch('/api/run', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date_preset: 'last_30d', account_id: _accountId, meta_token: _metaToken })
-    });
-    const data = await res.json();
-    if (res.ok) {
-      toast('Agent run started', 'success');
-    } else {
-      toast(data.error || 'Run failed', 'error');
-    }
-  } catch(e) {
-    toast('Network error — is the server running?', 'error');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Run Meta Ads Agent`;
-  }
+const TRIGGER_CMDS = [
+  { label: 'Meta Ads Agent', cmd: 'analyze my ads', skill: 'clawmarketer-meta' },
+  { label: 'Data Cleaner',   cmd: 'clean my data',  skill: 'clawmarketer-data' },
+];
+
+function renderTriggerCmds(installedSkills) {
+  const el = document.getElementById('trigger-cmds');
+  if (!el) return;
+  const cmds = installedSkills?.length
+    ? TRIGGER_CMDS.filter(t => installedSkills.includes(t.skill))
+    : TRIGGER_CMDS;
+  el.innerHTML = cmds.map(t => `
+    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--border);border-radius:8px;padding:10px 14px;">
+      <div>
+        <span style="font-size:12px;font-weight:600;color:var(--sub);display:block;margin-bottom:2px;">${t.label}</span>
+        <span style="font-family:monospace;font-size:13px;color:#a5b4fc;">${t.cmd}</span>
+      </div>
+      <button onclick="copyCmd('${t.cmd}')" style="padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600;background:var(--border2);border:1px solid var(--border);color:var(--sub);cursor:pointer;">Copy</button>
+    </div>`).join('');
+}
+
+window.copyCmd = async function(cmd) {
+  await navigator.clipboard.writeText(cmd).catch(() => {});
+  toast(`Copied: "${cmd}"`, 'success');
 };
 
 window.runDemo = async function() {
@@ -931,6 +839,7 @@ window.runDemo = async function() {
 // ─────────────────────────────────────────────
 function loadDashboard(user) {
   updateNavUser(user);
+  renderTriggerCmds();
   if (_db && _uid) {
     subscribeRuns();
   }
@@ -948,6 +857,7 @@ function subscribeRuns() {
       const runs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       renderLastRun(runs[0] || null);
       renderRunsTable(runs);
+      renderAgentsGrid(runs);
       renderDashboardStats(runs[0] || null);
     }, err => {
       console.warn('Firestore subscription error:', err);
@@ -1020,6 +930,63 @@ function renderLastRun(run) {
   document.getElementById('agent-meta-last-run').textContent = run.updated_at ? `Last run: ${timeEl.textContent}` : 'No runs yet';
 }
 
+const SKILL_META = {
+  'clawmarketer-meta': { label: 'Meta Ads Analyzer', color: '#a5b4fc', bg: 'rgba(99,102,241,.15)' },
+  'clawmarketer-data': { label: 'Data Cleaner',      color: '#4ade80', bg: 'rgba(34,197,94,.12)'  },
+};
+
+function skillLabel(skill) {
+  return SKILL_META[skill]?.label || skill || 'Unknown Agent';
+}
+
+function renderAgentsGrid(runs) {
+  const grid = document.getElementById('agents-grid');
+  if (!runs?.length) return; // keep empty state
+
+  // Group by skill, keep latest run per skill
+  const bySkill = {};
+  runs.forEach(r => {
+    const s = r.skill || 'unknown';
+    if (!bySkill[s] || r.updated_at > bySkill[s].updated_at) bySkill[s] = r;
+  });
+
+  grid.innerHTML = Object.entries(bySkill).map(([skill, run]) => {
+    const meta = SKILL_META[skill] || { label: skill, color: '#94a3b8', bg: 'rgba(148,163,184,.12)' };
+    const trigger = TRIGGER_CMDS.find(t => t.skill === skill);
+    const status = run.status || 'unknown';
+    const dotColor = status === 'done' ? 'dot-green' : status === 'running' ? 'dot-yellow' : 'dot-red';
+    const statusLabel = status === 'done' ? 'Idle' : status === 'running' ? 'Running' : status;
+    const lastRun = run.updated_at
+      ? timeAgo(run.updated_at.toDate ? run.updated_at.toDate() : new Date(run.updated_at))
+      : 'Never';
+    const summary = run.result?.report_text
+      ? run.result.report_text.slice(0, 90) + '…'
+      : (run.stages ? Object.values(run.stages).slice(-1)[0]?.message || '' : '');
+
+    return `<div class="card" style="padding:18px 20px;">
+      <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;">
+        <div style="width:36px;height:36px;border-radius:9px;background:${meta.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <div style="width:10px;height:10px;border-radius:50%;background:${meta.color};"></div>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
+            <span style="font-size:14px;font-weight:600;">${meta.label}</span>
+            <div style="display:flex;align-items:center;gap:4px;">
+              <div class="dot ${dotColor}"></div>
+              <span style="font-size:11px;color:var(--sub);font-weight:500;">${statusLabel}</span>
+            </div>
+          </div>
+          <p style="font-size:12px;color:var(--sub2);margin:0;">${summary}</p>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:12px;color:var(--sub);">Last run: ${lastRun}</span>
+        ${trigger ? `<div style="background:var(--border);border-radius:6px;padding:4px 10px;font-family:monospace;font-size:11px;color:#a5b4fc;cursor:pointer;" onclick="copyCmd('${trigger.cmd}')">${trigger.cmd}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
 function renderRunsTable(runs) {
   const wrap = document.getElementById('runs-table-wrap');
   if (!runs || runs.length === 0) {
@@ -1027,7 +994,7 @@ function renderRunsTable(runs) {
       <div class="empty-state">
         <div class="empty-icon">&#128202;</div>
         <p style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:6px;">No runs yet</p>
-        <p style="font-size:13px;color:var(--sub);">Start your first agent run from the Dashboard tab.</p>
+        <p style="font-size:13px;color:var(--sub);">Trigger an agent via Telegram — runs will appear here.</p>
       </div>`;
     return;
   }
@@ -1038,32 +1005,22 @@ function renderRunsTable(runs) {
     const date = run.updated_at
       ? (run.updated_at.toDate ? run.updated_at.toDate() : new Date(run.updated_at)).toLocaleDateString()
       : '—';
-    const m = run.meta || {};
+    const r = run.result || {};
+    const attachCount = run.attachments?.length || 0;
+    const attachBadge = attachCount ? `<span style="font-size:11px;color:var(--sub);margin-left:6px;">📎 ${attachCount}</span>` : '';
     return `
       <tr>
-        <td style="font-family:monospace;font-size:12px;color:var(--sub);">${(run.id || '').slice(0,12)}</td>
-        <td>Meta Ads Analyzer</td>
-        <td>${date}</td>
+        <td style="font-family:monospace;font-size:11px;color:var(--sub);">${(run.run_id || run.id || '').slice(0,14)}</td>
+        <td style="font-size:13px;">${skillLabel(run.skill)}${attachBadge}</td>
+        <td style="font-size:13px;">${date}</td>
         <td><span class="run-badge ${badgeClass}">${status}</span></td>
-        <td>${m.spend ? '$' + Number(m.spend).toLocaleString() : '—'}</td>
-        <td>${m.ctr ? Number(m.ctr).toFixed(2) + '%' : '—'}</td>
-        <td>${m.roas ? Number(m.roas).toFixed(2) + 'x' : '—'}</td>
+        <td style="font-size:13px;">${r.total_spend != null ? '$' + Number(r.total_spend).toLocaleString() : r.files_processed != null ? r.files_processed + ' files' : '—'}</td>
       </tr>`;
   }).join('');
 
   wrap.innerHTML = `
     <table class="runs-table">
-      <thead>
-        <tr>
-          <th>Run ID</th>
-          <th>Agent</th>
-          <th>Date</th>
-          <th>Status</th>
-          <th>Spend</th>
-          <th>CTR</th>
-          <th>ROAS</th>
-        </tr>
-      </thead>
+      <thead><tr><th>Run ID</th><th>Agent</th><th>Date</th><th>Status</th><th>Output</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
 }
@@ -1079,31 +1036,11 @@ function timeAgo(date) {
   return `${Math.floor(secs/86400)}d ago`;
 }
 
-// ─────────────────────────────────────────────
-// Responsive: collapse stats grid on mobile
-// ─────────────────────────────────────────────
-function applyResponsive() {
-  const grid = document.getElementById('stats-grid');
-  const agentsGrid = document.getElementById('agents-grid');
-  if (!grid) return;
-  if (window.innerWidth < 640) {
-    grid.style.gridTemplateColumns = 'repeat(2, 1fr)';
-  } else {
-    grid.style.gridTemplateColumns = 'repeat(4, 1fr)';
-  }
-  if (agentsGrid) {
-    agentsGrid.style.gridTemplateColumns = window.innerWidth < 640 ? '1fr' : 'repeat(2, 1fr)';
-  }
-  // Fix dashboard two-col layout
-  const dashTwo = document.querySelector('#tab-dashboard .app-content > div:last-child');
-  // handled inline already
-}
-window.addEventListener('resize', applyResponsive);
+
 
 // ─────────────────────────────────────────────
 // Boot
 // ─────────────────────────────────────────────
-applyResponsive();
 initFirebase();
 </script>
 </body>

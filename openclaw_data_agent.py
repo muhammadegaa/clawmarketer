@@ -53,10 +53,11 @@ if _repo_dir not in sys.path:
 # ── Progress ──────────────────────────────────────────────────────────────────
 
 def _push(run_id: str, stage: int, status: str, message: str,
-          done: bool = False, result: dict = None):
+          done: bool = False, result: dict = None, attachments: list = None):
     payload = {
         "user_id": CLAWMARKETER_USER_ID,
         "run_id":  run_id,
+        "skill":   "clawmarketer-data",
         "stage":   stage,
         "status":  status,
         "message": message,
@@ -64,6 +65,8 @@ def _push(run_id: str, stage: int, status: str, message: str,
     }
     if result:
         payload["result"] = result
+    if attachments:
+        payload["attachments"] = attachments
     try:
         requests.post(f"{CLAWMARKETER_URL}/api/agent/push", json=payload, timeout=10)
     except Exception:
@@ -226,16 +229,21 @@ def run(data_dir: str = None) -> str:
 
     send_message(message)
 
+    attachments = []
     for path in clean_paths:
         fname = os.path.basename(path)
-        send_document(path, caption=f"📎 {fname}")
+        mid = send_document(path, caption=f"📎 {fname}")
+        attachments.append({"name": fname, "type": "document", "telegram_message_id": mid})
 
-    _push(run_id, 4, "done", f"Done — {len(summaries)} files cleaned", done=True, result={
-        "files_processed": len(summaries),
-        "total_rows_removed": total_removed,
-        "report_text": ai_summary,
-        "anomalies": [],
-    })
+    _push(run_id, 4, "done", f"Done — {len(summaries)} files cleaned", done=True,
+        result={
+            "files_processed": len(summaries),
+            "total_rows_removed": total_removed,
+            "report_text": ai_summary,
+            "anomalies": [],
+        },
+        attachments=attachments,
+    )
 
     print(f"\n[ClawMarketer] Done. Files sent to Telegram.")
     return message

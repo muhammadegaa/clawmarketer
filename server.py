@@ -389,11 +389,13 @@ def openclaw_config(uid: str, token: str = ""):
 class ProgressPayload(BaseModel):
     user_id: str
     run_id: str
+    skill: str = "unknown"
     stage: int
     status: str
     message: str
     done: bool = False
     result: Optional[dict] = None
+    attachments: Optional[list] = None  # [{"name": str, "type": "photo"|"document", "telegram_message_id": int}]
 
 @app.post("/api/agent/push")
 def agent_push(payload: ProgressPayload):
@@ -430,18 +432,24 @@ def agent_push(payload: ProgressPayload):
     # Top-level document fields
     doc_fields: dict = {
         "run_id":     to_fs(payload.run_id),
+        "skill":      to_fs(payload.skill),
         "status":     to_fs(overall_status),
         "updated_at": to_fs(now),
         f"stages.{payload.stage}": to_fs(stage_entry),
     }
 
-    # On first stage, also set created_at
+    # On first stage, also set created_at and triggered_by
     if payload.stage == 1:
-        doc_fields["created_at"] = to_fs(now)
+        doc_fields["created_at"]    = to_fs(now)
+        doc_fields["triggered_by"]  = to_fs("telegram")
 
     # If final result provided, store it
     if payload.result:
         doc_fields["result"] = to_fs(payload.result)
+
+    # Attachments sent via Telegram
+    if payload.attachments:
+        doc_fields["attachments"] = to_fs(payload.attachments)
 
     url = (
         f"https://firestore.googleapis.com/v1/projects/{project_id}"

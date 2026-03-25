@@ -14,3 +14,4 @@ reports/
 research/
 .vercel/
 node_modules/
+clawmarketer.env

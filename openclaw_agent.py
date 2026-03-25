@@ -59,10 +59,11 @@ if _repo_dir not in sys.path:
 # ── Progress ──────────────────────────────────────────────────────────────────
 
 def _push(run_id: str, stage: int, status: str, message: str,
-          done: bool = False, result: dict = None):
+          done: bool = False, result: dict = None, attachments: list = None):
     payload = {
         "user_id": CLAWMARKETER_USER_ID,
         "run_id":  run_id,
+        "skill":   "clawmarketer-meta",
         "stage":   stage,
         "status":  status,
         "message": message,
@@ -70,6 +71,8 @@ def _push(run_id: str, stage: int, status: str, message: str,
     }
     if result:
         payload["result"] = result
+    if attachments:
+        payload["attachments"] = attachments
 
     try:
         requests.post(f"{CLAWMARKETER_URL}/api/agent/push", json=payload, timeout=10)
@@ -136,18 +139,8 @@ def run(date_preset: str = "last_30d") -> str:
     except Exception as e:
         report_text = f"AI report unavailable: {e}"
 
-    # Push final result to dashboard
-    o = results.get("overall", {})
-    _push(run_id, 4, "done", "Report ready ✅", done=True, result={
-        "total_spend":   o.get("total_spend", 0),
-        "overall_ctr":   o.get("overall_ctr", 0),
-        "avg_roas":      o.get("avg_roas", 0),
-        "num_campaigns": o.get("num_campaigns", 0),
-        "report_text":   report_text,
-        "anomalies":     results.get("anomalies", []),
-    })
-
     # ── Send to Telegram ────────────────────────────────────────────────────
+    o = results.get("overall", {})
     anomaly_lines = ""
     if results.get("anomalies"):
         anomaly_lines = "\n\n⚠️ *Anomalies detected:*\n" + "\n".join(
@@ -167,19 +160,33 @@ def run(date_preset: str = "last_30d") -> str:
         f"📋 Full report → {CLAWMARKETER_URL}"
     )
 
+    attachments = []
     send_message(summary)
 
     for chart in charts:
-        send_photo(chart)
+        mid = send_photo(chart)
+        attachments.append({"name": os.path.basename(chart), "type": "photo", "telegram_message_id": mid})
 
     if csv_path:
-        send_document(csv_path, caption="📎 Clean campaign data export")
+        mid = send_document(csv_path, caption="📎 Clean campaign data export")
+        attachments.append({"name": os.path.basename(csv_path), "type": "document", "telegram_message_id": mid})
 
-    # Send AI report as separate message (it can be long)
     if report_text and "unavailable" not in report_text:
-        # Truncate for Telegram (4096 char limit)
         report_preview = report_text[:3800] + ("…" if len(report_text) > 3800 else "")
         send_message(f"🤖 *AI Analysis:*\n\n{report_preview}")
+
+    # Push final result + attachments to dashboard
+    _push(run_id, 4, "done", "Report ready ✅", done=True,
+        result={
+            "total_spend":   o.get("total_spend", 0),
+            "overall_ctr":   o.get("overall_ctr", 0),
+            "avg_roas":      o.get("avg_roas", 0),
+            "num_campaigns": o.get("num_campaigns", 0),
+            "report_text":   report_text,
+            "anomalies":     results.get("anomalies", []),
+        },
+        attachments=attachments,
+    )
 
     print(f"\n[ClawMarketer] Done. Report sent to Telegram + dashboard updated.")
     return summary
