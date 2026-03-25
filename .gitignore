@@ -1,0 +1,15 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+*.csv
+!sample_meta_ads.csv
+reports/
+.vercel/
+node_modules/
