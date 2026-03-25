@@ -234,22 +234,42 @@
     #splash {
       position: fixed; inset: 0; z-index: 10000;
       background: var(--bg);
-      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
+      overflow: hidden;
+    }
+    /* Ambient glow behind icon */
+    #splash::before {
+      content: ''; position: absolute;
+      width: 320px; height: 320px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(99,102,241,.18) 0%, transparent 70%);
+      animation: splashGlow 1.8s ease both;
     }
     #splash .splash-icon {
-      animation: splashIconIn .5s cubic-bezier(.22,1,.36,1) both;
+      position: relative; margin-bottom: 24px;
+      animation: splashIconIn .6s cubic-bezier(.22,1,.36,1) both;
     }
-    #splash .splash-text {
-      font-size: 22px; font-weight: 700; color: var(--text); letter-spacing: -.3px;
-      animation: splashTextIn .5s .2s cubic-bezier(.22,1,.36,1) both;
+    #splash .splash-wordmark {
+      display: flex; align-items: center; gap: 11px;
+      animation: splashTextIn .55s .18s cubic-bezier(.22,1,.36,1) both;
     }
-    #splash .splash-sub {
-      font-size: 13px; color: var(--sub);
-      animation: splashTextIn .5s .35s cubic-bezier(.22,1,.36,1) both;
+    #splash .splash-wordmark span {
+      font-size: 26px; font-weight: 700; color: var(--text); letter-spacing: -.5px;
     }
-    #splash.splash-out { animation: splashFadeOut .4s .1s ease forwards; }
-    @keyframes splashIconIn  { from { opacity:0; transform: scale(.75); } to { opacity:1; transform: scale(1); } }
-    @keyframes splashTextIn  { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
+    #splash .splash-tagline {
+      font-size: 13px; color: var(--sub); margin-top: 10px; letter-spacing: .2px;
+      animation: splashTextIn .55s .32s cubic-bezier(.22,1,.36,1) both;
+    }
+    /* Thin progress line at bottom */
+    #splash .splash-bar {
+      position: absolute; bottom: 0; left: 0; height: 2px;
+      background: linear-gradient(90deg, var(--indigo), #818cf8);
+      animation: splashBar 1.5s .1s cubic-bezier(.4,0,.2,1) both;
+    }
+    #splash.splash-out { animation: splashFadeOut .45s ease forwards; }
+    @keyframes splashGlow    { from { opacity:0; transform: scale(.6); } to { opacity:1; transform: scale(1); } }
+    @keyframes splashIconIn  { from { opacity:0; transform: scale(.7) translateY(6px); } to { opacity:1; transform: scale(1) translateY(0); } }
+    @keyframes splashTextIn  { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
+    @keyframes splashBar     { from { width: 0; } to { width: 100%; } }
     @keyframes splashFadeOut { from { opacity:1; } to { opacity:0; pointer-events:none; } }
 
     /* ── Mobile ─────────────────────────────────────────── */
@@ -290,13 +310,16 @@
 <!-- ─── Splash screen ─── -->
 <div id="splash">
   <div class="splash-icon">
-    <svg width="64" height="64" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="32" height="32" rx="8" fill="#6366f1"/>
+    <svg width="72" height="72" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="32" height="32" rx="9" fill="#6366f1"/>
       <path d="M12 9 Q9 15 8 22 M16 8 Q16 15 16 23 M20 9 Q23 15 24 22" stroke="white" stroke-width="2.6" stroke-linecap="round"/>
     </svg>
   </div>
-  <div class="splash-text">ClawMarketer</div>
-  <div class="splash-sub">AI Marketing Agent</div>
+  <div class="splash-wordmark">
+    <span>ClawMarketer</span>
+  </div>
+  <div class="splash-tagline">AI Marketing Agent</div>
+  <div class="splash-bar"></div>
 </div>
 
 <!-- ─── Toast container ─── -->
@@ -697,6 +720,35 @@ if (_urlToken) {
   _metaToken = _urlToken;
   localStorage.setItem('meta_token', _metaToken);
   window.history.replaceState({}, '', '/');
+  // Persist to Firestore once auth is ready (uid available after sign-in)
+  window._pendingMetaToken = _urlToken;
+}
+
+async function saveMetaTokenToFirestore(token, accountId) {
+  if (!_db || !_uid || !token) return;
+  try {
+    await setDoc(doc(_db, 'users', _uid, 'integrations', 'meta'),
+      { access_token: token, account_id: accountId || '', connected_at: new Date().toISOString() },
+      { merge: true });
+  } catch(e) { /* non-fatal */ }
+}
+
+async function loadMetaTokenFromFirestore() {
+  if (!_db || !_uid) return;
+  try {
+    const snap = await getDoc(doc(_db, 'users', _uid, 'integrations', 'meta'));
+    if (snap.exists()) {
+      const d = snap.data();
+      if (d.access_token) {
+        _metaToken = d.access_token;
+        localStorage.setItem('meta_token', _metaToken);
+        if (d.account_id) {
+          _accountId = d.account_id;
+          localStorage.setItem('meta_account_id', _accountId);
+        }
+      }
+    }
+  } catch(e) { /* non-fatal */ }
 }
 
 // ─────────────────────────────────────────────
@@ -767,6 +819,13 @@ async function initFirebase() {
 
 async function afterSignIn(user) {
   updateNavUser(user);
+  // Load Meta token from Firestore (cross-device sync)
+  await loadMetaTokenFromFirestore();
+  // If a token just arrived via OAuth redirect, persist it now that we have uid
+  if (window._pendingMetaToken) {
+    await saveMetaTokenToFirestore(window._pendingMetaToken, _accountId || '');
+    delete window._pendingMetaToken;
+  }
   // Check Firestore first, fall back to localStorage for offline/slow loads
   let onboarded = localStorage.getItem(`cm_onboarded_${user.uid}`);
   if (!onboarded && _db) {
@@ -1116,11 +1175,15 @@ function renderIntegrations() {
     </div>`).join('');
 }
 
-window.disconnectMeta = function() {
+window.disconnectMeta = async function() {
   localStorage.removeItem('meta_token');
   localStorage.removeItem('meta_account_id');
   _metaToken = null;
   _accountId = null;
+  // Remove from Firestore so other devices also disconnect
+  if (_db && _uid) {
+    try { await setDoc(doc(_db, 'users', _uid, 'integrations', 'meta'), { access_token: null }, { merge: true }); } catch(e) {}
+  }
   renderIntegrations();
   toast('Meta Ads disconnected', 'success');
 };
