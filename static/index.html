@@ -670,9 +670,9 @@ async function initFirebase() {
     const res = await fetch('/api/config');
     if (!res.ok) { showPage('page-signin'); return; }
     const cfg = await res.json();
-    if (!cfg.apiKey) { showPage('page-signin'); return; }
+    if (!cfg.firebase?.apiKey) { showPage('page-signin'); return; }
 
-    const app = initializeApp(cfg);
+    const app = initializeApp(cfg.firebase);
     _auth = getAuth(app);
     _db   = getFirestore(app);
 
