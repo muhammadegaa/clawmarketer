@@ -187,7 +187,6 @@ def auth_status(request: Request):
     accounts = [
         {"id": a["id"], "name": a.get("name", a["id"])}
         for a in data.get("data", [])
-        if a.get("account_status") == 1  # 1 = active
     ]
     return {"connected": True, "accounts": accounts}
 
@@ -205,17 +204,14 @@ class RunRequest(BaseModel):
     account_id: Optional[str] = None
 
 def _get_first_ad_account(token: str) -> str:
-    """Auto-fetch the first active ad account from the Meta token."""
+    """Auto-fetch the first ad account from the Meta token."""
     resp = http.get(META_ACCOUNTS_URL, params={
         "access_token": token,
-        "fields": "id,account_status",
-        "limit": 5,
+        "fields": "id",
+        "limit": 10,
     })
     data = resp.json()
-    accounts = [a["id"] for a in data.get("data", []) if a.get("account_status") == 1]
-    if not accounts:
-        # Fallback: take any account regardless of status
-        accounts = [a["id"] for a in data.get("data", [])]
+    accounts = [a["id"] for a in data.get("data", [])]
     return accounts[0] if accounts else ""
 
 
