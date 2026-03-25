@@ -204,6 +204,21 @@ class RunRequest(BaseModel):
     date_preset: str = "last_30d"
     account_id: Optional[str] = None
 
+def _get_first_ad_account(token: str) -> str:
+    """Auto-fetch the first active ad account from the Meta token."""
+    resp = http.get(META_ACCOUNTS_URL, params={
+        "access_token": token,
+        "fields": "id,account_status",
+        "limit": 5,
+    })
+    data = resp.json()
+    accounts = [a["id"] for a in data.get("data", []) if a.get("account_status") == 1]
+    if not accounts:
+        # Fallback: take any account regardless of status
+        accounts = [a["id"] for a in data.get("data", [])]
+    return accounts[0] if accounts else ""
+
+
 @app.post("/api/run")
 def run_live(request: Request, body: RunRequest):
     token = request.session.get("meta_token")
@@ -211,6 +226,10 @@ def run_live(request: Request, body: RunRequest):
         raise HTTPException(status_code=401, detail="Not connected to Meta. Please reconnect.")
 
     account_id = body.account_id or os.getenv("META_AD_ACCOUNT_ID", "")
+    if not account_id:
+        account_id = _get_first_ad_account(token)
+    if not account_id:
+        raise HTTPException(status_code=400, detail="No ad account found. Please set META_AD_ACCOUNT_ID in Vercel env vars.")
 
     try:
         df_raw = fetcher.fetch(
