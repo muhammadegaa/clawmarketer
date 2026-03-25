@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ClawMarketer — AI Marketing Agent</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
     :root {
       --bg:      #080810;
@@ -21,1099 +24,1084 @@
       --sub:     #6b7280;
       --sub2:    #4b5563;
     }
-    * { box-sizing: border-box; }
-    body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
     ::-webkit-scrollbar { width: 4px; height: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
 
-    .sidebar { width: 220px; min-width: 220px; background: var(--surface); border-right: 1px solid var(--border); height: 100vh; position: fixed; top: 0; left: 0; display: flex; flex-direction: column; z-index: 40; }
-    .main { margin-left: 220px; min-height: 100vh; }
+    /* Utilities */
+    .hidden { display: none !important; }
 
-    .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--sub); cursor: pointer; transition: all .15s; text-decoration: none; }
-    .nav-item:hover { background: var(--border); color: var(--text); }
-    .nav-item.active { background: rgba(99,102,241,.15); color: #a5b4fc; }
-
-    .card  { background: var(--card); border: 1px solid var(--border); border-radius: 12px; }
-    .card-sm { background: var(--card); border: 1px solid var(--border); border-radius: 8px; }
-
-    .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
-    .stat-value { font-size: 28px; font-weight: 700; line-height: 1; }
-    .stat-label { font-size: 11px; font-weight: 500; color: var(--sub); text-transform: uppercase; letter-spacing: .06em; margin-top: 6px; }
-
-    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: all .15s; }
+    /* Buttons */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+      padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600;
+      cursor: pointer; border: none; transition: all .15s; white-space: nowrap;
+      text-decoration: none;
+    }
+    .btn-lg { padding: 13px 28px; font-size: 15px; border-radius: 10px; }
+    .btn-sm { padding: 6px 13px; font-size: 12px; border-radius: 6px; }
     .btn-primary { background: var(--indigo); color: #fff; }
-    .btn-primary:hover:not(:disabled) { background: var(--indigo2); }
+    .btn-primary:hover:not(:disabled) { background: var(--indigo2); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(99,102,241,.35); }
     .btn-secondary { background: var(--border); color: var(--text); }
     .btn-secondary:hover:not(:disabled) { background: var(--border2); }
+    .btn-ghost { background: transparent; color: var(--sub); border: 1px solid var(--border); }
+    .btn-ghost:hover:not(:disabled) { color: var(--text); border-color: var(--border2); }
     .btn:disabled { opacity: .4; cursor: not-allowed; }
-    .btn-sm { padding: 6px 12px; font-size: 12px; }
+    .btn-danger { background: rgba(239,68,68,.1); color: var(--red); border: 1px solid rgba(239,68,68,.2); }
+    .btn-danger:hover:not(:disabled) { background: rgba(239,68,68,.2); }
 
-    .run-feed { font-family: 'JetBrains Mono','Fira Code','Monaco',monospace; font-size: 12px; }
-    .run-line { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--border); }
-    .run-line:last-child { border-bottom: none; }
-    .run-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 3px; }
-    .run-dot.running { background: var(--indigo); box-shadow: 0 0 6px var(--indigo); animation: pulse 1.2s infinite; }
-    .run-dot.done    { background: var(--green); }
-    .run-dot.error   { background: var(--red); }
-    .run-dot.pending { background: var(--border2); }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    /* Cards */
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; }
+    .card-sm { background: var(--card); border: 1px solid var(--border); border-radius: 8px; }
 
-    .stage-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; }
-    .stage-num { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
-    .stage-num.done    { background: rgba(34,197,94,.15); color: var(--green); }
-    .stage-num.running { background: rgba(99,102,241,.2); color: #a5b4fc; }
-    .stage-num.pending { background: var(--border); color: var(--sub2); }
-    .stage-num.error   { background: rgba(239,68,68,.15); color: var(--red); }
-    .stage-line { width: 1px; height: 20px; background: var(--border); margin-left: 12px; }
+    /* Status dots */
+    .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .dot-green { background: var(--green); box-shadow: 0 0 6px rgba(34,197,94,.5); }
+    .dot-grey { background: var(--sub2); }
+    .dot-indigo { background: var(--indigo); animation: pulse 1.4s infinite; }
+    .dot-red { background: var(--red); }
+    .dot-yellow { background: var(--yellow); }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-    .tab-bar { display: flex; border-bottom: 1px solid var(--border); }
-    .tab { padding: 10px 16px; font-size: 13px; font-weight: 500; color: var(--sub); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all .15s; }
-    .tab:hover { color: var(--text); }
-    .tab.active { color: #a5b4fc; border-bottom-color: var(--indigo); }
-
-    .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .data-table th { text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 600; color: var(--sub); text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid var(--border); white-space: nowrap; }
-    .data-table td { padding: 11px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
-    .data-table tr:last-child td { border-bottom: none; }
-    .data-table tr:hover td { background: rgba(255,255,255,.02); }
-
-    .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-    .badge-green  { background: rgba(34,197,94,.12);  color: #4ade80; }
-    .badge-yellow { background: rgba(234,179,8,.12);  color: #fbbf24; }
-    .badge-red    { background: rgba(239,68,68,.12);  color: #f87171; }
-    .badge-indigo { background: rgba(99,102,241,.15); color: #a5b4fc; }
-    .badge-gray   { background: var(--border); color: var(--sub); }
-
-    .input { background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 9px 12px; font-size: 13px; color: var(--text); outline: none; transition: border-color .15s; width: 100%; }
-    .input:focus { border-color: var(--indigo); }
-    .input::placeholder { color: var(--sub2); }
-
-    .upload-zone { border: 1.5px dashed var(--border2); border-radius: 12px; padding: 40px; text-align: center; cursor: pointer; transition: all .15s; }
-    .upload-zone:hover, .upload-zone.dragover { border-color: var(--indigo); background: rgba(99,102,241,.05); }
-
-    .agent-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
-    .agent-pill.idle    { background: var(--border); color: var(--sub); }
-    .agent-pill.running { background: rgba(99,102,241,.2); color: #a5b4fc; }
-    .agent-pill.done    { background: rgba(34,197,94,.12); color: #4ade80; }
-    .agent-pill.error   { background: rgba(239,68,68,.12); color: #f87171; }
-
-    .spinner { width: 14px; height: 14px; border: 2px solid var(--border2); border-top-color: var(--indigo); border-radius: 50%; animation: spin .7s linear infinite; }
+    /* Spinner */
+    .spinner {
+      width: 16px; height: 16px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,.15);
+      border-top-color: #fff;
+      animation: spin .7s linear infinite; flex-shrink: 0;
+    }
+    .spinner-indigo { border-color: rgba(99,102,241,.2); border-top-color: var(--indigo); }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    #toast { position: fixed; bottom: 24px; right: 24px; z-index: 999; display: flex; flex-direction: column; gap: 8px; }
-    .toast-item { background: var(--card); border: 1px solid var(--border2); border-radius: 10px; padding: 12px 16px; font-size: 13px; max-width: 340px; animation: slideIn .2s ease; }
-    @keyframes slideIn { from { transform: translateY(8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    /* Toast */
+    #toast-container {
+      position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+      display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+    }
+    .toast {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 16px; border-radius: 10px; font-size: 13px; font-weight: 500;
+      backdrop-filter: blur(12px); pointer-events: all;
+      animation: slideIn .2s ease; max-width: 320px;
+      border: 1px solid var(--border2);
+    }
+    .toast-success { background: rgba(34,197,94,.12); border-color: rgba(34,197,94,.25); color: #86efac; }
+    .toast-error   { background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.25); color: #fca5a5; }
+    .toast-info    { background: rgba(99,102,241,.12); border-color: rgba(99,102,241,.25); color: #a5b4fc; }
+    @keyframes slideIn { from { opacity:0; transform: translateX(16px); } to { opacity:1; transform: translateX(0); } }
 
-    .report-body h2 { font-size: 15px; font-weight: 700; color: #a5b4fc; margin: 16px 0 6px; }
-    .report-body h3 { font-size: 13px; font-weight: 600; color: var(--text); margin: 12px 0 4px; }
-    .report-body p  { font-size: 13px; color: #94a3b8; line-height: 1.7; margin-bottom: 8px; }
-    .report-body ul { list-style: none; padding: 0; }
-    .report-body li { font-size: 13px; color: #94a3b8; padding: 3px 0 3px 14px; position: relative; }
-    .report-body li::before { content: "▸"; position: absolute; left: 0; color: var(--indigo); }
-    .report-body strong { color: var(--text); }
+    /* Top nav */
+    #topnav {
+      position: fixed; top: 0; left: 0; right: 0; height: 56px; z-index: 50;
+      background: rgba(8,8,16,.85); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; padding: 0 24px; gap: 0;
+    }
+    .nav-logo { display: flex; align-items: center; gap: 9px; font-size: 15px; font-weight: 700; color: var(--text); text-decoration: none; }
+    .nav-logo-icon {
+      width: 28px; height: 28px; background: var(--indigo); border-radius: 7px;
+      display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; color: #fff;
+    }
+    .nav-tabs { display: flex; align-items: center; gap: 2px; margin: 0 auto; }
+    .nav-tab {
+      padding: 6px 14px; border-radius: 7px; font-size: 13px; font-weight: 500;
+      color: var(--sub); cursor: pointer; transition: all .15s;
+    }
+    .nav-tab:hover { color: var(--text); background: rgba(255,255,255,.05); }
+    .nav-tab.active { color: #a5b4fc; background: rgba(99,102,241,.15); }
+    .nav-right { display: flex; align-items: center; gap: 10px; }
+    .nav-avatar {
+      width: 30px; height: 30px; border-radius: 50%; object-fit: cover;
+      border: 2px solid var(--border2);
+    }
+    .nav-user-name { font-size: 13px; font-weight: 500; color: var(--sub); }
 
-    .caret { display: inline-block; width: 8px; height: 14px; background: var(--indigo); animation: blink 1s step-end infinite; vertical-align: text-bottom; }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+    /* App layout */
+    #page-app { padding-top: 56px; min-height: 100vh; }
+    .app-content { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
 
-    .history-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; transition: background .15s; }
-    .history-item:hover { background: var(--border); }
+    /* Stat cards */
+    .stat-card { padding: 22px; }
+    .stat-value { font-size: 26px; font-weight: 700; line-height: 1; letter-spacing: -.02em; }
+    .stat-label { font-size: 11px; font-weight: 500; color: var(--sub); text-transform: uppercase; letter-spacing: .07em; margin-top: 6px; }
+    .stat-change { font-size: 12px; margin-top: 8px; }
+    .stat-change.up { color: var(--green); }
+    .stat-change.down { color: var(--red); }
+
+    /* Stage progress */
+    .stage-row { display: flex; align-items: flex-start; gap: 14px; padding: 10px 0; position: relative; }
+    .stage-row:not(:last-child)::before {
+      content: ''; position: absolute; left: 12px; top: 32px;
+      width: 1px; height: calc(100% - 10px); background: var(--border);
+    }
+    .stage-icon {
+      width: 26px; height: 26px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; flex-shrink: 0; position: relative; z-index: 1;
+    }
+    .stage-icon.done    { background: rgba(34,197,94,.15); color: var(--green); }
+    .stage-icon.running { background: rgba(99,102,241,.2); color: #a5b4fc; }
+    .stage-icon.pending { background: var(--border); color: var(--sub2); }
+    .stage-icon.error   { background: rgba(239,68,68,.15); color: var(--red); }
+
+    /* Agent cards */
+    .agent-card { padding: 22px; display: flex; flex-direction: column; gap: 14px; position: relative; }
+    .agent-icon-wrap { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+    .coming-soon-badge {
+      position: absolute; top: 14px; right: 14px;
+      padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600;
+      background: rgba(234,179,8,.1); color: var(--yellow); border: 1px solid rgba(234,179,8,.2);
+    }
+
+    /* Runs table */
+    .runs-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .runs-table th {
+      text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 600;
+      color: var(--sub); text-transform: uppercase; letter-spacing: .06em;
+      border-bottom: 1px solid var(--border); white-space: nowrap;
+    }
+    .runs-table td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .runs-table tr:last-child td { border-bottom: none; }
+    .runs-table tr:hover td { background: rgba(255,255,255,.02); }
+    .run-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600;
+    }
+    .run-badge.success { background: rgba(34,197,94,.1); color: #86efac; }
+    .run-badge.running { background: rgba(99,102,241,.1); color: #a5b4fc; }
+    .run-badge.error   { background: rgba(239,68,68,.1); color: #fca5a5; }
+    .run-badge.pending { background: rgba(107,114,128,.1); color: var(--sub); }
+
+    /* Wizard */
+    #page-wizard { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
+    .wizard-card { width: 100%; max-width: 520px; }
+    .wizard-progress { display: flex; align-items: center; gap: 8px; margin-bottom: 40px; }
+    .wiz-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border2); transition: all .25s; }
+    .wiz-dot.active { background: var(--indigo); box-shadow: 0 0 8px rgba(99,102,241,.5); width: 22px; border-radius: 4px; }
+    .wiz-dot.done { background: var(--green); }
+    .wizard-step { animation: fadeUp .25s ease; }
+    @keyframes fadeUp { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: translateY(0); } }
+
+    /* Model picker */
+    .model-pill {
+      padding: 7px 14px; border-radius: 20px; font-size: 13px; font-weight: 500;
+      border: 1px solid var(--border); color: var(--sub); cursor: pointer; transition: all .15s;
+      background: transparent;
+    }
+    .model-pill:hover { border-color: var(--border2); color: var(--text); }
+    .model-pill.selected { background: rgba(99,102,241,.15); border-color: var(--indigo); color: #a5b4fc; }
+
+    /* Code block */
+    .code-block {
+      background: rgba(0,0,0,.4); border: 1px solid var(--border);
+      border-radius: 10px; padding: 16px; font-family: 'JetBrains Mono','Fira Code','Monaco',monospace;
+      font-size: 12px; line-height: 1.7; color: #94a3b8; overflow-y: auto; max-height: 260px;
+      white-space: pre-wrap; word-break: break-word;
+    }
+
+    /* Sign in page */
+    #page-signin { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .signin-card { width: 100%; max-width: 400px; padding: 48px 40px; text-align: center; }
+
+    /* Check item */
+    .check-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .check-item:last-child { border-bottom: none; }
+    .check-circle {
+      width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 13px;
+    }
+    .check-circle.ok { background: rgba(34,197,94,.15); color: var(--green); }
+    .check-circle.skip { background: var(--border); color: var(--sub2); }
+
+    /* Divider */
+    .divider { height: 1px; background: var(--border); margin: 4px 0; }
+
+    /* Empty state */
+    .empty-state { text-align: center; padding: 56px 24px; }
+    .empty-icon { font-size: 32px; margin-bottom: 14px; filter: grayscale(1); opacity: .4; }
   </style>
 </head>
-<body class="min-h-screen">
+<body>
 
-<!-- ── Sidebar ── -->
-<aside class="sidebar">
-  <div class="p-4 border-b" style="border-color:var(--border)">
-    <div class="flex items-center gap-2.5">
-      <div class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold" style="background:var(--indigo)">C</div>
-      <div>
-        <div class="font-bold text-sm tracking-tight">ClawMarketer</div>
-        <div class="text-xs" style="color:var(--sub)">AI Agent Platform</div>
+<!-- ─── Toast container ─── -->
+<div id="toast-container"></div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PAGE: Sign In
+════════════════════════════════════════════════════════════ -->
+<div id="page-signin" class="hidden">
+  <div class="card signin-card">
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px;">
+      <div class="nav-logo-icon" style="width:36px;height:36px;border-radius:9px;font-size:17px;">C</div>
+      <span style="font-size:20px;font-weight:700;color:var(--text);">ClawMarketer</span>
+    </div>
+    <p style="color:var(--sub);font-size:14px;margin-bottom:36px;line-height:1.5;">
+      AI agents that run your marketing.<br>You just watch.
+    </p>
+    <button id="btn-google-signin" class="btn btn-primary btn-lg" style="width:100%;justify-content:center;" onclick="signInWithGoogle()">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+        <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
+        <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+        <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+      </svg>
+      Sign in with Google
+    </button>
+    <p style="color:var(--sub2);font-size:12px;margin-top:20px;">
+      By signing in you agree to our terms of service.
+    </p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PAGE: Onboarding Wizard
+════════════════════════════════════════════════════════════ -->
+<div id="page-wizard" class="hidden">
+  <div class="wizard-card">
+    <!-- Progress dots -->
+    <div class="wizard-progress" id="wiz-progress">
+      <div class="wiz-dot active" id="wdot-0"></div>
+      <div class="wiz-dot" id="wdot-1"></div>
+      <div class="wiz-dot" id="wdot-2"></div>
+    </div>
+
+    <!-- Step 0: Connect Meta Ads -->
+    <div id="wiz-step-0" class="wizard-step">
+      <p style="font-size:12px;font-weight:600;color:var(--indigo);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Step 1 of 3</p>
+      <h1 style="font-size:26px;font-weight:700;line-height:1.25;margin-bottom:12px;">Connect your Meta Ads account</h1>
+      <p style="color:var(--sub);font-size:15px;line-height:1.6;margin-bottom:32px;">
+        The agent needs read access to analyze your campaigns and surface what's working.
+      </p>
+      <div id="wiz-meta-connected" class="hidden" style="display:flex;align-items:center;gap:10px;padding:14px 18px;background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:10px;margin-bottom:24px;">
+        <div class="dot dot-green"></div>
+        <span style="font-size:14px;font-weight:500;color:#86efac;">Meta Ads connected</span>
       </div>
+      <button class="btn btn-primary btn-lg" style="width:100%;justify-content:center;" onclick="connectMeta()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+        Connect Meta Ads
+      </button>
+      <button onclick="wizNext()" style="display:block;margin:16px auto 0;background:none;border:none;color:var(--sub);font-size:13px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;">
+        Skip for now &rarr;
+      </button>
+    </div>
+
+    <!-- Step 1: Set up agent -->
+    <div id="wiz-step-1" class="wizard-step hidden">
+      <p style="font-size:12px;font-weight:600;color:var(--indigo);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Step 2 of 3</p>
+      <h1 style="font-size:26px;font-weight:700;line-height:1.25;margin-bottom:12px;">Set up your local agent</h1>
+      <p style="color:var(--sub);font-size:15px;line-height:1.6;margin-bottom:28px;">
+        Your agent runs on your machine and talks to you via Telegram. A coding agent can set it up in 2 minutes.
+      </p>
+
+      <!-- Model picker -->
+      <p style="font-size:12px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px;">Choose your AI model</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;" id="model-picker">
+        <button class="model-pill selected" data-model="groq" onclick="selectModel('groq')">Groq</button>
+        <button class="model-pill" data-model="anthropic" onclick="selectModel('anthropic')">Anthropic</button>
+        <button class="model-pill" data-model="openai" onclick="selectModel('openai')">OpenAI</button>
+        <button class="model-pill" data-model="openrouter" onclick="selectModel('openrouter')">OpenRouter</button>
+        <button class="model-pill" data-model="other" onclick="selectModel('other')">Other</button>
+      </div>
+
+      <!-- Prompt code block -->
+      <div style="position:relative;">
+        <pre id="setup-prompt-code" class="code-block"></pre>
+        <button onclick="copySetupPrompt()" style="position:absolute;top:10px;right:10px;padding:5px 11px;border-radius:6px;font-size:11px;font-weight:600;background:var(--border2);border:1px solid var(--border);color:var(--sub);cursor:pointer;transition:all .15s;" id="copy-btn">Copy</button>
+      </div>
+
+      <p style="color:var(--sub2);font-size:13px;margin:14px 0 24px;">
+        Paste this into Claude Code, Codex, or any terminal AI agent.
+      </p>
+
+      <button class="btn btn-primary btn-lg" style="width:100%;justify-content:center;" onclick="wizNext()">
+        I've set it up &rarr;
+      </button>
+    </div>
+
+    <!-- Step 2: Done -->
+    <div id="wiz-step-2" class="wizard-step hidden">
+      <p style="font-size:12px;font-weight:600;color:var(--indigo);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Step 3 of 3</p>
+      <h1 style="font-size:26px;font-weight:700;line-height:1.25;margin-bottom:12px;">You're all set</h1>
+      <p style="color:var(--sub);font-size:15px;line-height:1.6;margin-bottom:32px;">
+        Your ClawMarketer setup is complete. Head to the dashboard to trigger your first run.
+      </p>
+
+      <div class="card" style="padding:6px 20px;margin-bottom:32px;">
+        <div class="check-item">
+          <div class="check-circle" id="check-meta-icon">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div>
+            <p style="font-size:14px;font-weight:500;" id="check-meta-label">Meta Ads connected</p>
+            <p style="font-size:12px;color:var(--sub);" id="check-meta-sub">Ready to analyze your campaigns</p>
+          </div>
+        </div>
+        <div class="check-item">
+          <div class="check-circle ok">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div>
+            <p style="font-size:14px;font-weight:500;">Agent installed</p>
+            <p style="font-size:12px;color:var(--sub);">Running on your machine via OpenClaw</p>
+          </div>
+        </div>
+        <div class="check-item">
+          <div class="check-circle ok">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div>
+            <p style="font-size:14px;font-weight:500;">Dashboard ready</p>
+            <p style="font-size:12px;color:var(--sub);">Monitor runs and metrics in real time</p>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-lg" style="width:100%;justify-content:center;" onclick="finishOnboarding()">
+        Open dashboard &rarr;
+      </button>
     </div>
   </div>
+</div>
 
-  <nav class="p-3 flex-1 overflow-y-auto">
-    <div class="text-xs font-semibold mb-2 px-2" style="color:var(--sub2);letter-spacing:.08em">WORKSPACE</div>
-    <a href="/" class="nav-item active" id="nav-dashboard" onclick="showPanel('overview');return false;">
-      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-      Dashboard
+<!-- ═══════════════════════════════════════════════════════════
+     PAGE: Main App
+════════════════════════════════════════════════════════════ -->
+<div id="page-app" class="hidden">
+
+  <!-- Top Nav -->
+  <nav id="topnav">
+    <a href="#" class="nav-logo">
+      <div class="nav-logo-icon">C</div>
+      ClawMarketer
     </a>
-    <a href="/onboarding" class="nav-item">
-      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 3"/></svg>
-      Setup Guide
-    </a>
-    <div class="nav-item" id="nav-profile" onclick="showPanel('profile')">
-      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-      My Config
+    <div class="nav-tabs">
+      <div class="nav-tab active" data-tab="dashboard" onclick="switchTab('dashboard')">Dashboard</div>
+      <div class="nav-tab" data-tab="agents" onclick="switchTab('agents')">Agents</div>
+      <div class="nav-tab" data-tab="runs" onclick="switchTab('runs')">Runs</div>
     </div>
-
-<div class="text-xs font-semibold mt-5 mb-2 px-2" style="color:var(--sub2);letter-spacing:.08em">AGENTS</div>
-    <div class="nav-item" id="nav-meta-agent" onclick="showPanel('meta')">
-      <div class="w-2 h-2 rounded-full" id="meta-agent-dot" style="background:var(--sub2)"></div>
-      Meta Ads Agent
-    </div>
-    <div class="nav-item" id="nav-data-agent" onclick="showPanel('data')">
-      <div class="w-2 h-2 rounded-full" id="data-agent-dot" style="background:var(--sub2)"></div>
-      Data Cleansing Agent
-    </div>
-
-    <div class="text-xs font-semibold mt-5 mb-2 px-2" style="color:var(--sub2);letter-spacing:.08em">RECENT RUNS</div>
-    <div id="sidebar-history" class="space-y-0.5">
-      <div class="px-2 py-1 text-xs" style="color:var(--sub)">No runs yet</div>
+    <div class="nav-right">
+      <span class="nav-user-name" id="nav-user-name"></span>
+      <img id="nav-avatar" class="nav-avatar hidden" src="" alt="avatar" />
+      <button class="btn btn-ghost btn-sm" onclick="signOutUser()">Sign out</button>
     </div>
   </nav>
 
-  <div class="p-3 border-t" style="border-color:var(--border)">
-    <button onclick="signIn()" class="btn btn-primary w-full justify-center text-xs py-2" id="signin-btn">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-      Sign in with Google
-    </button>
-    <div id="user-info" class="hidden">
-      <div class="flex items-center gap-2.5 px-1">
-        <img id="user-avatar" class="w-7 h-7 rounded-full" src="" alt="" />
-        <div class="flex-1 min-w-0">
-          <div class="text-xs font-medium truncate" id="user-name"></div>
-          <div class="text-xs truncate" style="color:var(--sub)" id="user-email"></div>
-        </div>
-        <button onclick="doSignOut()" class="text-xs" style="color:var(--sub)" title="Sign out">↩</button>
-      </div>
+  <!-- ── Tab: Dashboard ── -->
+  <div id="tab-dashboard" class="app-content">
+    <div style="margin-bottom:28px;">
+      <h1 id="greeting" style="font-size:22px;font-weight:700;margin-bottom:4px;">Welcome back</h1>
+      <p style="color:var(--sub);font-size:14px;">Here's what your agents have been up to.</p>
     </div>
-  </div>
-</aside>
 
-<!-- ── Main ── -->
-<main class="main">
-
-  <header class="flex items-center justify-between px-6 py-4 border-b sticky top-0 z-30" style="background:var(--bg);border-color:var(--border)">
-    <div>
-      <h1 class="font-bold text-base" id="page-title">Agent Dashboard</h1>
-      <p class="text-xs mt-0.5" style="color:var(--sub)" id="page-sub">Run agents via Telegram or directly here</p>
-    </div>
-    <div class="flex items-center gap-3">
-      <div id="live-status" class="hidden agent-pill idle">
-        <div class="w-1.5 h-1.5 rounded-full" style="background:currentColor"></div>
-        <span>Idle</span>
-      </div>
-      <button onclick="showPanel('meta')" class="btn btn-primary btn-sm">
-        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-        Run Agent
-      </button>
-    </div>
-  </header>
-
-  <!-- OVERVIEW -->
-  <div id="panel-overview" class="p-6">
-
-    <div class="grid grid-cols-4 gap-4 mb-6">
-      <div class="stat-card">
-        <div class="stat-value" id="stat-spend">—</div>
+    <!-- Stats row -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px;" id="stats-grid">
+      <div class="card stat-card">
         <div class="stat-label">Total Spend</div>
+        <div class="stat-value" id="stat-spend">—</div>
       </div>
-      <div class="stat-card">
+      <div class="card stat-card">
+        <div class="stat-label">CTR</div>
         <div class="stat-value" id="stat-ctr">—</div>
-        <div class="stat-label">Avg CTR</div>
       </div>
-      <div class="stat-card">
+      <div class="card stat-card">
+        <div class="stat-label">ROAS</div>
         <div class="stat-value" id="stat-roas">—</div>
-        <div class="stat-label">Avg ROAS</div>
       </div>
-      <div class="stat-card">
-        <div class="stat-value" id="stat-campaigns">—</div>
+      <div class="card stat-card">
         <div class="stat-label">Campaigns</div>
+        <div class="stat-value" id="stat-campaigns">—</div>
       </div>
     </div>
 
-    <div class="grid grid-cols-5 gap-4">
+    <!-- Two-column layout -->
+    <div style="display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start;">
 
-      <!-- Live feed -->
-      <div class="col-span-3 card p-0 overflow-hidden">
-        <div class="flex items-center justify-between px-5 py-3.5 border-b" style="border-color:var(--border)">
-          <div class="flex items-center gap-2.5">
-            <div class="font-semibold text-sm">Agent Activity</div>
-            <div id="feed-status-pill" class="agent-pill idle" style="font-size:11px;padding:2px 8px">
-              <div class="w-1.5 h-1.5 rounded-full" style="background:currentColor"></div>
-              Idle
-            </div>
-          </div>
-          <span class="text-xs font-mono" style="color:var(--sub)" id="feed-run-id"></span>
+      <!-- Last run -->
+      <div class="card" style="padding:22px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+          <h2 style="font-size:15px;font-weight:600;">Last Run</h2>
+          <span id="last-run-time" style="font-size:12px;color:var(--sub);"></span>
         </div>
-
-        <div class="px-5 py-4 border-b" style="border-color:var(--border)">
-          <div class="stage-row">
-            <div class="stage-num pending" id="stage-1-num">1</div>
-            <div class="flex-1">
-              <div class="text-xs font-medium">Fetch data</div>
-              <div class="text-xs mt-0.5" style="color:var(--sub)" id="stage-1-msg">Waiting…</div>
-            </div>
-            <div id="stage-1-icon"></div>
-          </div>
-          <div class="stage-line"></div>
-          <div class="stage-row">
-            <div class="stage-num pending" id="stage-2-num">2</div>
-            <div class="flex-1">
-              <div class="text-xs font-medium">Clean data</div>
-              <div class="text-xs mt-0.5" style="color:var(--sub)" id="stage-2-msg">Waiting…</div>
-            </div>
-            <div id="stage-2-icon"></div>
-          </div>
-          <div class="stage-line"></div>
-          <div class="stage-row">
-            <div class="stage-num pending" id="stage-3-num">3</div>
-            <div class="flex-1">
-              <div class="text-xs font-medium">Analyze</div>
-              <div class="text-xs mt-0.5" style="color:var(--sub)" id="stage-3-msg">Waiting…</div>
-            </div>
-            <div id="stage-3-icon"></div>
-          </div>
-          <div class="stage-line"></div>
-          <div class="stage-row">
-            <div class="stage-num pending" id="stage-4-num">4</div>
-            <div class="flex-1">
-              <div class="text-xs font-medium">Generate report</div>
-              <div class="text-xs mt-0.5" style="color:var(--sub)" id="stage-4-msg">Waiting…</div>
-            </div>
-            <div id="stage-4-icon"></div>
-          </div>
-        </div>
-
-        <div class="run-feed px-5 py-3 max-h-52 overflow-y-auto" id="run-log">
-          <div class="run-line" style="border:none">
-            <div class="run-dot pending"></div>
-            <span style="color:var(--sub)">Waiting for agent<span class="caret"></span></span>
+        <div id="last-run-content">
+          <div class="empty-state">
+            <div class="empty-icon">&#9881;</div>
+            <p style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:6px;">No runs yet</p>
+            <p style="font-size:13px;color:var(--sub);">Trigger your agent via Telegram or click "Run now" below.</p>
           </div>
         </div>
       </div>
 
-      <!-- Right column -->
-      <div class="col-span-2 flex flex-col gap-4">
-
-        <div class="card p-5">
-          <div class="font-semibold text-sm mb-3">Quick Run</div>
-          <div class="space-y-2">
-            <button onclick="showPanel('meta')" class="btn btn-secondary w-full justify-start text-xs">
-              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-              Meta Ads Analysis
+      <!-- Quick actions -->
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div class="card" style="padding:22px;">
+          <h2 style="font-size:15px;font-weight:600;margin-bottom:14px;">Quick Actions</h2>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <button class="btn btn-primary" style="justify-content:center;" onclick="runAgent()" id="btn-run">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              Run Meta Ads Agent
             </button>
-            <button onclick="showPanel('data')" class="btn btn-secondary w-full justify-start text-xs">
-              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
-              Data Cleansing
-            </button>
-            <button onclick="runDemo()" class="btn w-full justify-start text-xs" style="background:rgba(99,102,241,.12);color:#a5b4fc">
-              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>
-              Demo Run (sample data)
+            <button class="btn btn-secondary" style="justify-content:center;" onclick="runDemo()" id="btn-demo">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              Run Demo
             </button>
           </div>
         </div>
 
-        <div class="card flex-1 overflow-hidden">
-          <div class="px-4 py-3 border-b text-sm font-semibold" style="border-color:var(--border)">Run History</div>
-          <div id="run-history" class="overflow-y-auto" style="max-height:320px">
-            <div class="px-4 py-8 text-center text-xs" style="color:var(--sub)">No runs yet.<br>Sign in to see history.</div>
+        <div class="card" style="padding:22px;">
+          <h2 style="font-size:15px;font-weight:600;margin-bottom:6px;">Telegram Trigger</h2>
+          <p style="font-size:13px;color:var(--sub);margin-bottom:12px;">Send a message to your bot:</p>
+          <div style="display:flex;flex-direction:column;gap:7px;">
+            <div style="background:var(--border);border-radius:7px;padding:8px 12px;font-family:monospace;font-size:12px;color:#a5b4fc;">analyze my ads</div>
+            <div style="background:var(--border);border-radius:7px;padding:8px 12px;font-family:monospace;font-size:12px;color:#a5b4fc;">clean my data</div>
           </div>
         </div>
-
       </div>
     </div>
-
-    <!-- Results -->
-    <div id="results-section" class="hidden mt-6">
-      <div class="card overflow-hidden">
-        <div class="tab-bar px-2 pt-2">
-          <div class="tab active" onclick="switchTab(event,'campaigns')">Campaigns</div>
-          <div class="tab" onclick="switchTab(event,'anomalies')">Anomalies</div>
-          <div class="tab" onclick="switchTab(event,'report')">AI Report</div>
-        </div>
-        <div id="tab-campaigns" class="overflow-x-auto">
-          <table class="data-table">
-            <thead><tr>
-              <th>Campaign</th><th>Spend</th><th>Impressions</th><th>Clicks</th><th>CTR</th><th>CPC</th><th>ROAS</th>
-            </tr></thead>
-            <tbody id="campaigns-body"></tbody>
-          </table>
-        </div>
-        <div id="tab-anomalies" class="hidden p-5">
-          <div id="anomalies-body" class="space-y-2"></div>
-        </div>
-        <div id="tab-report" class="hidden p-5">
-          <div id="report-body" class="report-body"></div>
-        </div>
-      </div>
-    </div>
-
   </div>
 
-  <!-- META AGENT -->
-  <div id="panel-meta" class="hidden p-6">
-    <div class="max-w-2xl">
-      <div class="flex items-center gap-3 mb-6">
-        <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:rgba(99,102,241,.15)">
-          <svg width="18" height="18" fill="none" stroke="#a5b4fc" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-        </div>
-        <div>
-          <h2 class="font-bold">Meta Ads Intelligence Agent</h2>
-          <p class="text-xs mt-0.5" style="color:var(--sub)">Fetch, analyze and report on your Meta Ads campaigns</p>
-        </div>
-      </div>
+  <!-- ── Tab: Agents ── -->
+  <div id="tab-agents" class="app-content hidden">
+    <div style="margin-bottom:28px;">
+      <h1 style="font-size:22px;font-weight:700;margin-bottom:4px;">Agents</h1>
+      <p style="color:var(--sub);font-size:14px;">Manage and run your marketing automation agents.</p>
+    </div>
 
-      <div class="card-sm mb-4">
-        <div class="tab-bar px-2 pt-2">
-          <div class="tab active" onclick="switchSource(event,'oauth')" id="src-tab-oauth">Live Meta Ads</div>
-          <div class="tab" onclick="switchSource(event,'upload')" id="src-tab-upload">Upload CSV</div>
-          <div class="tab" onclick="switchSource(event,'demo')" id="src-tab-demo">Sample Data</div>
-        </div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;" id="agents-grid">
 
-        <div id="src-panel-oauth" class="p-5">
-          <div id="meta-not-connected" class="hidden">
-            <p class="text-sm mb-4" style="color:var(--sub)">Connect your Meta Ads account to pull live campaign data.</p>
-            <a href="/auth/meta" class="btn btn-primary">Connect Meta Ads</a>
+      <!-- Meta Ads Analyzer -->
+      <div class="card agent-card">
+        <div style="display:flex;align-items:flex-start;gap:14px;">
+          <div class="agent-icon-wrap" style="background:rgba(99,102,241,.15);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a5b4fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
           </div>
-          <div id="meta-connected" class="hidden">
-            <div class="flex items-center gap-2 mb-4">
-              <div class="w-2 h-2 rounded-full" style="background:var(--green)"></div>
-              <span class="text-sm font-medium" style="color:var(--green)">Meta Ads connected</span>
-              <button onclick="disconnectMeta()" class="ml-auto text-xs" style="color:var(--sub)">Disconnect</button>
-            </div>
-            <div class="mb-4">
-              <label class="text-xs font-medium block mb-1.5" style="color:var(--sub)">Ad Account</label>
-              <select id="account-selector" class="input hidden mb-3" style="font-size:12px"></select>
-            </div>
-            <div class="mb-4">
-              <label class="text-xs font-medium block mb-2" style="color:var(--sub)">Date Range</label>
-              <div class="grid grid-cols-3 gap-2">
-                <button class="btn btn-secondary btn-sm date-preset" data-preset="last_7d">7 days</button>
-                <button class="btn btn-secondary btn-sm date-preset active-preset" data-preset="last_30d" style="background:rgba(99,102,241,.2);color:#a5b4fc">30 days</button>
-                <button class="btn btn-secondary btn-sm date-preset" data-preset="last_90d">90 days</button>
-                <button class="btn btn-secondary btn-sm date-preset" data-preset="last_month">Last month</button>
-                <button class="btn btn-secondary btn-sm date-preset" data-preset="last_quarter">Quarter</button>
-                <button class="btn btn-secondary btn-sm date-preset" data-preset="last_year">Last year</button>
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+              <h3 style="font-size:15px;font-weight:600;">Meta Ads Analyzer</h3>
+              <div style="display:flex;align-items:center;gap:5px;">
+                <div class="dot dot-green" id="agent-meta-dot"></div>
+                <span style="font-size:11px;color:var(--green);font-weight:500;" id="agent-meta-status">Active</span>
               </div>
             </div>
-            <button onclick="runMetaOAuth()" class="btn btn-primary w-full justify-center" id="run-oauth-btn">
-              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>
-              Run Analysis
-            </button>
+            <p style="font-size:13px;color:var(--sub);line-height:1.5;">Analyze campaign performance, detect anomalies, generate AI reports.</p>
           </div>
         </div>
-
-        <div id="src-panel-upload" class="hidden p-5">
-          <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
-            <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" class="mx-auto mb-3" style="color:var(--sub)"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            <p class="text-sm font-medium mb-1">Drop CSV file here</p>
-            <p class="text-xs" style="color:var(--sub)">or click to browse · CSV, Excel supported</p>
-            <div id="file-name" class="mt-3 text-xs hidden" style="color:#a5b4fc"></div>
-          </div>
-          <input type="file" id="file-input" accept=".csv,.xlsx,.xls" class="hidden" onchange="onFileSelect(event)" />
-          <button onclick="runUpload()" class="btn btn-primary w-full justify-center mt-3" id="run-upload-btn" disabled>
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>
-            Run Analysis
-          </button>
+        <div class="divider"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:12px;color:var(--sub);" id="agent-meta-last-run">No runs yet</span>
+          <button class="btn btn-primary btn-sm" onclick="runAgent()">Run now</button>
         </div>
-
-        <div id="src-panel-demo" class="hidden p-5">
-          <p class="text-sm mb-3" style="color:var(--sub)">Run a full pipeline with realistic sample campaign data. No API keys needed.</p>
-          <div class="card-sm p-3 mb-4 text-xs space-y-1" style="color:var(--sub)">
-            <div class="font-medium mb-1" style="color:var(--text)">Includes:</div>
-            <div>· 5 sample campaigns × 3 weeks</div>
-            <div>· Spend / CTR / ROAS analysis</div>
-            <div>· AI-generated report via Groq</div>
-            <div>· Anomaly detection</div>
-          </div>
-          <button onclick="runDemo()" class="btn btn-primary w-full justify-center">
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>
-            Run Demo
-          </button>
+        <div style="background:var(--border);border-radius:6px;padding:7px 11px;font-family:monospace;font-size:12px;color:var(--sub);">
+          Telegram: <span style="color:#a5b4fc;">analyze my ads</span>
         </div>
       </div>
 
-      <div class="card-sm p-4 flex gap-3" style="border-color:rgba(99,102,241,.3)">
-        <svg width="16" height="16" fill="none" stroke="#a5b4fc" stroke-width="2" viewBox="0 0 24 24" class="mt-0.5 flex-shrink-0"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4 20-7z"/></svg>
-        <div class="text-xs" style="color:var(--sub)">
-          <span class="font-medium" style="color:#a5b4fc">Via Telegram:</span> Message your OpenClaw bot
-          <code class="mx-1 px-1.5 py-0.5 rounded" style="background:var(--border);color:var(--text)">"analyze ads last 30 days"</code>
-          and results appear here automatically.
+      <!-- Data Cleansing -->
+      <div class="card agent-card">
+        <div style="display:flex;align-items:flex-start;gap:14px;">
+          <div class="agent-icon-wrap" style="background:rgba(34,197,94,.12);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+              <h3 style="font-size:15px;font-weight:600;">Data Cleansing</h3>
+              <div style="display:flex;align-items:center;gap:5px;">
+                <div class="dot dot-green"></div>
+                <span style="font-size:11px;color:var(--green);font-weight:500;">Active</span>
+              </div>
+            </div>
+            <p style="font-size:13px;color:var(--sub);line-height:1.5;">Scan local CSV/Excel files, remove duplicates, normalize columns.</p>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:12px;color:var(--sub);">No runs yet</span>
+          <button class="btn btn-secondary btn-sm">Run now</button>
+        </div>
+        <div style="background:var(--border);border-radius:6px;padding:7px 11px;font-family:monospace;font-size:12px;color:var(--sub);">
+          Telegram: <span style="color:#a5b4fc;">clean my data</span>
+        </div>
+      </div>
+
+      <!-- Content Scheduler -->
+      <div class="card agent-card" style="opacity:.6;">
+        <span class="coming-soon-badge">Coming soon</span>
+        <div style="display:flex;align-items:flex-start;gap:14px;">
+          <div class="agent-icon-wrap" style="background:rgba(234,179,8,.1);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </div>
+          <div style="flex:1;min-width:0;">
+            <h3 style="font-size:15px;font-weight:600;margin-bottom:4px;">Content Scheduler</h3>
+            <p style="font-size:13px;color:var(--sub);line-height:1.5;">Schedule and publish social posts based on ad performance.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Competitor Monitor -->
+      <div class="card agent-card" style="opacity:.6;">
+        <span class="coming-soon-badge">Coming soon</span>
+        <div style="display:flex;align-items:flex-start;gap:14px;">
+          <div class="agent-icon-wrap" style="background:rgba(168,85,247,.12);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </div>
+          <div style="flex:1;min-width:0;">
+            <h3 style="font-size:15px;font-weight:600;margin-bottom:4px;">Competitor Monitor</h3>
+            <p style="font-size:13px;color:var(--sub);line-height:1.5;">Track competitor ads and surface strategic insights weekly.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Email Performance -->
+      <div class="card agent-card" style="opacity:.6;">
+        <span class="coming-soon-badge">Coming soon</span>
+        <div style="display:flex;align-items:flex-start;gap:14px;">
+          <div class="agent-icon-wrap" style="background:rgba(59,130,246,.12);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          </div>
+          <div style="flex:1;min-width:0;">
+            <h3 style="font-size:15px;font-weight:600;margin-bottom:4px;">Email Performance</h3>
+            <p style="font-size:13px;color:var(--sub);line-height:1.5;">Connect your ESP and analyze open rates, clicks, and revenue.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Tab: Runs ── -->
+  <div id="tab-runs" class="app-content hidden">
+    <div style="margin-bottom:28px;">
+      <h1 style="font-size:22px;font-weight:700;margin-bottom:4px;">Run History</h1>
+      <p style="color:var(--sub);font-size:14px;">Every agent execution, with results and metrics.</p>
+    </div>
+
+    <div class="card" style="overflow:hidden;">
+      <div id="runs-table-wrap">
+        <div class="empty-state">
+          <div class="empty-icon">&#128202;</div>
+          <p style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:6px;">No runs yet</p>
+          <p style="font-size:13px;color:var(--sub);">Start your first agent run from the Dashboard tab.</p>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- DATA AGENT -->
-  <div id="panel-data" class="hidden p-6">
-    <div class="max-w-2xl">
-      <div class="flex items-center gap-3 mb-6">
-        <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:rgba(34,197,94,.1)">
-          <svg width="18" height="18" fill="none" stroke="#4ade80" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-        </div>
-        <div>
-          <h2 class="font-bold">Data Cleansing Agent</h2>
-          <p class="text-xs mt-0.5" style="color:var(--sub)">Scan local files, clean, deduplicate and send reports via Telegram</p>
-        </div>
-      </div>
-
-      <div class="card-sm p-5 mb-4">
-        <div class="font-semibold text-sm mb-4">How it works</div>
-        <div class="space-y-4">
-          <div class="flex gap-3">
-            <div class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold" style="background:rgba(99,102,241,.15);color:#a5b4fc">1</div>
-            <div class="text-sm" style="color:var(--sub)">OpenClaw scans your configured <code class="px-1 rounded" style="background:var(--border);color:var(--text)">DATA_DIR</code> for CSV/Excel files</div>
-          </div>
-          <div class="flex gap-3">
-            <div class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold" style="background:rgba(99,102,241,.15);color:#a5b4fc">2</div>
-            <div class="text-sm" style="color:var(--sub)">Each file is cleaned — duplicates removed, nulls fixed, columns normalised</div>
-          </div>
-          <div class="flex gap-3">
-            <div class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold" style="background:rgba(99,102,241,.15);color:#a5b4fc">3</div>
-            <div class="text-sm" style="color:var(--sub)">Clean files (prefixed <code class="px-1 rounded" style="background:var(--border);color:var(--text)">clean_</code>) saved back to your machine</div>
-          </div>
-          <div class="flex gap-3">
-            <div class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold" style="background:rgba(99,102,241,.15);color:#a5b4fc">4</div>
-            <div class="text-sm" style="color:var(--sub)">AI summary + clean files sent to Telegram. Progress shown here.</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card-sm p-4 mb-4">
-        <div class="font-semibold text-sm mb-3">Telegram triggers</div>
-        <div class="space-y-2.5">
-          <div class="flex items-center justify-between">
-            <code class="text-xs px-2 py-1 rounded" style="background:var(--border);color:#a5b4fc">"clean my data"</code>
-            <span class="text-xs" style="color:var(--sub)">Scans default DATA_DIR</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <code class="text-xs px-2 py-1 rounded" style="background:var(--border);color:#a5b4fc">"clean data in ~/reports"</code>
-            <span class="text-xs" style="color:var(--sub)">Scans custom path</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <code class="text-xs px-2 py-1 rounded" style="background:var(--border);color:#a5b4fc">"analyze my files"</code>
-            <span class="text-xs" style="color:var(--sub)">Same as clean my data</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="card-sm p-4 flex gap-3" style="border-color:rgba(34,197,94,.2)">
-        <svg width="16" height="16" fill="none" stroke="#4ade80" stroke-width="2" viewBox="0 0 24 24" class="mt-0.5 flex-shrink-0"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4 20-7z"/></svg>
-        <div class="text-xs" style="color:var(--sub)">
-          <span class="font-medium" style="color:#4ade80">Runs on your machine:</span> Set <code class="mx-1 px-1.5 py-0.5 rounded" style="background:var(--border);color:var(--text)">DATA_DIR</code> in <code class="px-1.5 py-0.5 rounded" style="background:var(--border);color:var(--text)">clawmarketer.env</code> to point at your data folder.
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Profile panel -->
-  <div id="panel-profile" class="hidden p-6">
-    <div class="max-w-2xl">
-      <div class="flex items-center gap-3 mb-6">
-        <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:rgba(99,102,241,.1)">
-          <svg width="18" height="18" fill="none" stroke="#a5b4fc" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-        </div>
-        <div>
-          <h2 class="font-bold">My Config</h2>
-          <p class="text-xs mt-0.5" style="color:var(--sub)">Copy these values into your local <code style="color:var(--text)">clawmarketer.env</code></p>
-        </div>
-      </div>
-
-      <div id="profile-no-auth" class="card p-5 text-sm" style="color:var(--sub)">
-        Sign in to see your config.
-      </div>
-
-      <div id="profile-auth" class="hidden space-y-3">
-
-        <!-- Individual fields -->
-        <div class="card p-4 space-y-3">
-          <!-- non-sensitive -->
-          <div>
-            <div class="text-xs font-medium mb-1" style="color:var(--sub)">CLAWMARKETER_URL</div>
-            <div class="flex items-center gap-2">
-              <code class="flex-1 text-xs px-3 py-2 rounded" style="background:var(--border);color:#a5b4fc">https://clawmarketer.vercel.app</code>
-              <button class="copy-field-btn btn btn-secondary btn-sm" data-val="https://clawmarketer.vercel.app">copy</button>
-            </div>
-          </div>
-          <div>
-            <div class="text-xs font-medium mb-1" style="color:var(--sub)">META_AD_ACCOUNT_ID</div>
-            <div class="flex items-center gap-2">
-              <code class="flex-1 text-xs px-3 py-2 rounded profile-account" style="background:var(--border);color:#a5b4fc">—</code>
-              <button class="copy-field-btn btn btn-secondary btn-sm profile-account-copy" data-val="">copy</button>
-            </div>
-          </div>
-          <!-- sensitive — masked by default -->
-          <div>
-            <div class="text-xs font-medium mb-1" style="color:var(--sub)">CLAWMARKETER_USER_ID</div>
-            <div class="flex items-center gap-2">
-              <code class="flex-1 text-xs px-3 py-2 rounded profile-uid" style="background:var(--border);color:#a5b4fc">••••••••••••••••</code>
-              <button class="reveal-btn btn btn-secondary btn-sm" data-field="uid" data-val="" data-revealed="0">show</button>
-              <button class="copy-field-btn btn btn-secondary btn-sm profile-uid-copy" data-val="">copy</button>
-            </div>
-          </div>
-          <div>
-            <div class="text-xs font-medium mb-1" style="color:var(--sub)">META_ACCESS_TOKEN</div>
-            <div class="flex items-center gap-2">
-              <code class="flex-1 text-xs px-3 py-2 rounded truncate profile-token" style="background:var(--border);color:#a5b4fc">••••••••••••••••</code>
-              <button class="reveal-btn btn btn-secondary btn-sm" data-field="token" data-val="" data-revealed="0">show</button>
-              <button class="copy-field-btn btn btn-secondary btn-sm profile-token-copy" data-val="">copy</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Full env file -->
-        <div class="card p-4">
-          <div class="flex items-center justify-between mb-2">
-            <div class="text-xs font-medium" style="color:var(--sub)">clawmarketer.env — copy everything below</div>
-            <div class="flex gap-2">
-              <button onclick="toggleEnvReveal()" id="env-reveal-btn" class="btn btn-secondary btn-sm">show values</button>
-              <button onclick="copyEnvFile()" class="btn btn-primary btn-sm">copy file</button>
-            </div>
-          </div>
-          <pre id="env-preview" class="text-xs" style="color:#a5b4fc;white-space:pre;overflow-x:auto"></pre>
-        </div>
-
-        <div class="card-sm p-3 text-xs" style="color:var(--sub)">
-          Still need to add: <code style="color:var(--text)">GROQ_API_KEY</code>, <code style="color:var(--text)">TELEGRAM_BOT_TOKEN</code>, <code style="color:var(--text)">TELEGRAM_CHAT_ID</code> — get these from Vercel env vars and @BotFather.
-        </div>
-      </div>
-    </div>
-  </div>
-
-</main>
-
-<div id="toast"></div>
+</div>
+<!-- end page-app -->
 
 <script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut as fbSignOut }
-  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, collection, query, orderBy, limit, onSnapshot, doc }
-  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+// ─────────────────────────────────────────────
+// Imports
+// ─────────────────────────────────────────────
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+  from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { getFirestore, collection, query, orderBy, limit, onSnapshot }
+  from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
-const cfg = await fetch('/api/config').then(r => r.json());
-let app, auth, db, unsubHistory, unsubRun;
+// ─────────────────────────────────────────────
+// Global state
+// ─────────────────────────────────────────────
+let _auth = null;
+let _db   = null;
+let _user = null;
+let _uid  = null;
+let _metaToken = localStorage.getItem('meta_token') || null;
+let _metaSkipped = false;
+let _accountId = null;
+let _wizStep = 0;
+let _selectedModel = 'groq';
+let _runsUnsub = null;
 
-if (cfg.firebase?.apiKey) {
-  app  = initializeApp(cfg.firebase);
-  auth = getAuth(app);
-  db   = getFirestore(app);
+// Pick up meta_token from URL after OAuth redirect
+const _urlParams = new URLSearchParams(window.location.search);
+const _urlToken = _urlParams.get('meta_token');
+if (_urlToken) {
+  _metaToken = _urlToken;
+  localStorage.setItem('meta_token', _metaToken);
+  window.history.replaceState({}, '', '/');
 }
 
-// ── Auth ──
-window.signIn = async () => {
-  if (!auth) return showToast('Firebase not configured', 'error');
-  try { await signInWithPopup(auth, new GoogleAuthProvider()); }
-  catch(e) { showToast(e.message, 'error'); }
-};
-
-window.doSignOut = async () => {
-  if (auth) await fbSignOut(auth);
-  document.getElementById('user-info').classList.add('hidden');
-  document.getElementById('signin-btn').classList.remove('hidden');
-  document.getElementById('run-history').innerHTML = '<div class="px-4 py-8 text-center text-xs" style="color:var(--sub)">Sign in to see history.</div>';
-  document.getElementById('sidebar-history').innerHTML = '<div class="px-2 py-1 text-xs" style="color:var(--sub)">No runs yet</div>';
-};
-
-if (auth) {
-  onAuthStateChanged(auth, async user => {
-    if (!user) {
-      document.getElementById('signin-btn').classList.remove('hidden');
-      document.getElementById('user-info').classList.add('hidden');
-      return;
-    }
-    document.getElementById('signin-btn').classList.add('hidden');
-    document.getElementById('user-info').classList.remove('hidden');
-    document.getElementById('user-name').textContent  = user.displayName || 'User';
-    document.getElementById('user-email').textContent = user.email || '';
-    if (user.photoURL) document.getElementById('user-avatar').src = user.photoURL;
-    window._uid = user.uid;
-    subscribeHistory(user.uid);
-    checkMetaStatus();
-  });
-}
-
-// ── Meta token — stored in localStorage, never on server ──
-let _metaToken  = localStorage.getItem('meta_token') || null;
-let _accountId  = null;
-
-// Pick up token from URL after OAuth redirect (?meta_token=... URL-encoded)
-{
-  const _urlParams = new URLSearchParams(window.location.search);
-  const _urlToken  = _urlParams.get('meta_token');
-  if (_urlToken) {
-    _metaToken = _urlToken; // URLSearchParams auto-decodes percent-encoding
-    localStorage.setItem('meta_token', _metaToken);
-    window.history.replaceState({}, '', '/');
-  }
-}
-
-async function checkMetaStatus() {
-  if (!_metaToken) {
-    document.getElementById('meta-not-connected').classList.remove('hidden');
-    document.getElementById('meta-connected').classList.add('hidden');
-    return;
-  }
-  try {
-    const data = await fetch(`/auth/status?token=${encodeURIComponent(_metaToken)}`).then(r => r.json());
-    document.getElementById('meta-not-connected').classList.toggle('hidden', data.connected);
-    document.getElementById('meta-connected').classList.toggle('hidden', !data.connected);
-
-    if (!data.connected) {
-      // Token expired — clear it
-      localStorage.removeItem('meta_token');
-      _metaToken = null;
-      return;
-    }
-    if (data.accounts?.length) {
-      _accountId = data.accounts[0].id;
-      const sel = document.getElementById('account-selector');
-      if (sel) {
-        sel.innerHTML = data.accounts.map(a =>
-          `<option value="${a.id}">${a.name} (${a.id})</option>`
-        ).join('');
-        sel.classList.toggle('hidden', data.accounts.length <= 1);
-        sel.onchange = () => { _accountId = sel.value; };
-      }
-    }
-  } catch(e) {}
-}
-
-window.disconnectMeta = async () => {
-  localStorage.removeItem('meta_token');
-  _metaToken  = null;
-  _accountId  = null;
-  await fetch('/auth/disconnect', { method: 'POST' });
-  checkMetaStatus();
-};
-
-// ── Firestore run history ──
-function subscribeHistory(uid) {
-  if (!db) return;
-  if (unsubHistory) unsubHistory();
-  const q = query(collection(db, 'users', uid, 'runs'), orderBy('created_at', 'desc'), limit(20));
-  unsubHistory = onSnapshot(q, snap => {
-    const runs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderHistory(runs);
-    renderSidebarHistory(runs);
-    if (runs.length > 0) subscribeRun(uid, runs[0].id);
-  });
-}
-
-function renderHistory(runs) {
-  const el = document.getElementById('run-history');
-  if (!runs.length) {
-    el.innerHTML = '<div class="px-4 py-8 text-center text-xs" style="color:var(--sub)">No runs yet.</div>';
-    return;
-  }
-  el.innerHTML = runs.map(r => {
-    const sc = r.status === 'done' ? 'badge-green' : r.status === 'error' ? 'badge-red' : 'badge-indigo';
-    const lbl = r.status === 'done' ? 'Done' : r.status === 'error' ? 'Error' : 'Running';
-    const ts = r.created_at ? new Date(r.created_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
-    return `<div class="history-item" onclick="loadRun('${r.id}')">
-      <div class="flex-1 min-w-0">
-        <div class="text-xs font-medium truncate font-mono">${(r.run_id||r.id).slice(0,22)}</div>
-        <div class="text-xs mt-0.5" style="color:var(--sub)">${ts}</div>
-      </div>
-      <span class="badge ${sc}">${lbl}</span>
-    </div>`;
-  }).join('');
-}
-
-function renderSidebarHistory(runs) {
-  const el = document.getElementById('sidebar-history');
-  if (!runs.length) {
-    el.innerHTML = '<div class="px-2 py-1 text-xs" style="color:var(--sub)">No runs yet</div>';
-    return;
-  }
-  el.innerHTML = runs.slice(0,5).map(r => {
-    const dot = r.status === 'done' ? 'var(--green)' : r.status === 'error' ? 'var(--red)' : 'var(--indigo)';
-    const ts = r.created_at ? new Date(r.created_at).toLocaleString('en-US',{month:'short',day:'numeric'}) : '';
-    return `<div class="nav-item text-xs gap-2" onclick="loadRun('${r.id}')">
-      <div class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background:${dot}"></div>
-      <span class="truncate font-mono">${(r.run_id||r.id).slice(0,16)}</span>
-      <span class="ml-auto flex-shrink-0" style="color:var(--sub2)">${ts}</span>
-    </div>`;
-  }).join('');
-}
-
-function subscribeRun(uid, runDocId) {
-  if (!db) return;
-  if (unsubRun) unsubRun();
-  unsubRun = onSnapshot(doc(db, 'users', uid, 'runs', runDocId), snap => {
-    if (!snap.exists()) return;
-    const data = snap.data();
-    renderAgentFeed(data);
-    if (data.result) updateStats(data.result);
-  });
-}
-
-window.loadRun = (id) => {
-  if (!window._uid || !db) return;
-  subscribeRun(window._uid, id);
-  showPanel('overview');
-};
-
-// ── Agent feed ──
-function renderAgentFeed(data) {
-  const { stages = {}, status, run_id } = data;
-
-  document.getElementById('feed-run-id').textContent = run_id ? run_id.slice(0,22) : '';
-
-  const pill = document.getElementById('feed-status-pill');
-  const ls   = document.getElementById('live-status');
-  ls.classList.remove('hidden');
-
-  if (status === 'done') {
-    setStatusPill(pill, 'done', '✓ Complete');
-    setStatusPill(ls, 'done', 'Done');
-    document.getElementById('meta-agent-dot').style.background = 'var(--green)';
-  } else if (status === 'error') {
-    setStatusPill(pill, 'error', '✗ Error');
-    setStatusPill(ls, 'error', 'Error');
-  } else {
-    setStatusPill(pill, 'running', '● Running');
-    setStatusPill(ls, 'running', 'Running');
-    document.getElementById('meta-agent-dot').style.background = 'var(--indigo)';
-  }
-
-  // Stages 1-4
-  for (let n = 1; n <= 4; n++) {
-    const s = stages[n] || stages[String(n)];
-    if (!s) continue;
-    const numEl  = document.getElementById(`stage-${n}-num`);
-    const msgEl  = document.getElementById(`stage-${n}-msg`);
-    const iconEl = document.getElementById(`stage-${n}-icon`);
-    numEl.className = `stage-num ${s.status}`;
-    msgEl.textContent = s.message || '';
-    if (s.status === 'done')    iconEl.innerHTML = `<svg width="14" height="14" fill="none" stroke="var(--green)" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg>`;
-    else if (s.status === 'running') iconEl.innerHTML = `<div class="spinner"></div>`;
-    else if (s.status === 'error')   iconEl.innerHTML = `<svg width="14" height="14" fill="none" stroke="var(--red)" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
-    else iconEl.innerHTML = '';
-  }
-
-  // Log
-  const logLines = Object.values(stages);
-  if (logLines.length) {
-    const log = document.getElementById('run-log');
-    log.innerHTML = logLines.map(s => `
-      <div class="run-line">
-        <div class="run-dot ${s.status}"></div>
-        <span style="color:${s.status==='done'?'var(--green)':s.status==='error'?'var(--red)':s.status==='running'?'#a5b4fc':'var(--sub)'}">${s.message}</span>
-      </div>`).join('');
-    log.scrollTop = log.scrollHeight;
-  }
-}
-
-function setStatusPill(el, cls, text) {
-  if (!el) return;
-  el.className = `agent-pill ${cls}`;
-  el.innerHTML = `<div class="w-1.5 h-1.5 rounded-full" style="background:currentColor"></div><span>${text}</span>`;
-}
-
-function updateStats(result) {
-  if (!result) return;
-  const fmt = (v, pre='', suf='', d=0) => v!=null ? `${pre}${Number(v).toLocaleString('en',{minimumFractionDigits:d,maximumFractionDigits:d})}${suf}` : '—';
-  document.getElementById('stat-spend').textContent     = fmt(result.total_spend,'$','',0);
-  document.getElementById('stat-ctr').textContent       = fmt(result.overall_ctr,'','%',2);
-  document.getElementById('stat-roas').textContent      = fmt(result.avg_roas,'','x',2);
-  document.getElementById('stat-campaigns').textContent = fmt(result.num_campaigns);
-  if (result.campaigns) renderCampaigns(result.campaigns);
-  if (result.anomalies) renderAnomalies(result.anomalies);
-  if (result.report_text) renderReport(result.report_text);
-  document.getElementById('results-section').classList.remove('hidden');
-}
-
-// ── Run handlers ──
-let _preset = 'last_30d';
-let _file   = null;
-
-document.querySelectorAll('.date-preset').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.date-preset').forEach(b => {
-      b.style.background = ''; b.style.color = '';
-    });
-    btn.style.background = 'rgba(99,102,241,.2)';
-    btn.style.color = '#a5b4fc';
-    _preset = btn.dataset.preset;
-  });
-});
-
-window.runMetaOAuth = async () => {
-  const btn = document.getElementById('run-oauth-btn');
-  btn.disabled = true;
-  btn.innerHTML = '<div class="spinner"></div> Running…';
-  try {
-    const res  = await fetch('/api/run', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ date_preset: _preset, account_id: _accountId, meta_token: _metaToken }) });
-    const data = await res.json();
-    if (res.status === 404) {
-      showToast('No campaigns found in this date range — try Demo mode to see the platform in action.', 'info');
-      return;
-    }
-    if (!res.ok) throw new Error(data.detail || 'Run failed');
-    handleResult(data); showPanel('overview'); showToast('Analysis complete!', 'success');
-  } catch(e) { showToast(e.message, 'error'); }
-  finally {
-    btn.disabled = false;
-    btn.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg> Run Analysis';
-  }
-};
-
-window.runUpload = async () => {
-  if (!_file) return;
-  const btn = document.getElementById('run-upload-btn');
-  btn.disabled = true; btn.innerHTML = '<div class="spinner"></div> Analyzing…';
-  try {
-    const fd = new FormData(); fd.append('file', _file);
-    const res  = await fetch('/api/upload', { method:'POST', body: fd });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || 'Upload failed');
-    handleResult(data); showPanel('overview'); showToast('Analysis complete!', 'success');
-  } catch(e) { showToast(e.message, 'error'); }
-  finally {
-    btn.disabled = false;
-    btn.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg> Run Analysis';
-  }
-};
-
-window.runDemo = async () => {
-  showPanel('overview');
-  showToast('Running demo pipeline…', 'info');
-  try {
-    const res  = await fetch('/api/demo', { method:'POST' });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || 'Demo failed');
-    handleResult(data); showToast('Demo complete!', 'success');
-  } catch(e) { showToast(e.message, 'error'); }
-};
-
-function handleResult(data) {
-  updateStats(data);
-  renderAgentFeed({
-    stages: {
-      1: {status:'done', message:'Data fetched'},
-      2: {status:'done', message:'Data cleaned'},
-      3: {status:'done', message:'Analysis complete'},
-      4: {status:'done', message:'Report generated'},
-    },
-    status: 'done',
-    run_id: 'local_run',
-  });
-}
-
-// ── Table renderers ──
-function renderCampaigns(campaigns) {
-  const tb = document.getElementById('campaigns-body');
-  if (!campaigns.length) { tb.innerHTML = '<tr><td colspan="7" class="text-center py-6" style="color:var(--sub)">No data</td></tr>'; return; }
-  tb.innerHTML = campaigns.map(c => {
-    const cb = c.ctr>=2?'badge-green':c.ctr>=1?'badge-yellow':'badge-red';
-    const rb = c.roas>=2?'badge-green':c.roas>=1?'badge-yellow':'badge-red';
-    return `<tr>
-      <td class="font-medium" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name||'—'}</td>
-      <td>$${c.spend!=null?c.spend.toLocaleString():'—'}</td>
-      <td>${c.impressions!=null?c.impressions.toLocaleString():'—'}</td>
-      <td>${c.clicks!=null?c.clicks.toLocaleString():'—'}</td>
-      <td><span class="badge ${cb}">${c.ctr!=null?c.ctr.toFixed(2)+'%':'—'}</span></td>
-      <td>$${c.cpc!=null?c.cpc.toFixed(2):'—'}</td>
-      <td><span class="badge ${rb}">${c.roas!=null?c.roas.toFixed(2)+'x':'—'}</span></td>
-    </tr>`;
-  }).join('');
-}
-
-function renderAnomalies(anomalies) {
-  const el = document.getElementById('anomalies-body');
-  if (!anomalies.length) {
-    el.innerHTML = '<div class="flex items-center gap-2 text-sm" style="color:var(--green)"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg> No anomalies detected</div>';
-    return;
-  }
-  el.innerHTML = anomalies.map(a => `
-    <div class="flex gap-3 p-3 rounded-lg" style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15)">
-      <svg width="14" height="14" fill="none" stroke="var(--red)" stroke-width="2" viewBox="0 0 24 24" class="mt-0.5 flex-shrink-0"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      <span class="text-sm" style="color:#fca5a5">${a}</span>
-    </div>`).join('');
-}
-
-function renderReport(text) {
-  const el = document.getElementById('report-body');
-  let html = text
-    .replace(/^## (.+)$/gm,'<h2>$1</h2>')
-    .replace(/^### (.+)$/gm,'<h3>$1</h3>')
-    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
-    .replace(/^- (.+)$/gm,'<li>$1</li>')
-    .replace(/^(?!<[hlu])(.*\S.*)$/gm,'<p>$1</p>');
-  el.innerHTML = `<div class="report-body">${html}</div>`;
-}
-
-// ── File upload ──
-window.onFileSelect = (e) => {
-  _file = e.target.files[0];
-  if (!_file) return;
-  document.getElementById('file-name').textContent = `📎 ${_file.name}`;
-  document.getElementById('file-name').classList.remove('hidden');
-  document.getElementById('run-upload-btn').disabled = false;
-};
-window.onDragOver  = (e) => { e.preventDefault(); document.getElementById('drop-zone').classList.add('dragover'); };
-window.onDragLeave = ()  => { document.getElementById('drop-zone').classList.remove('dragover'); };
-window.onDrop = (e) => {
-  e.preventDefault(); document.getElementById('drop-zone').classList.remove('dragover');
-  _file = e.dataTransfer.files[0];
-  if (_file) {
-    document.getElementById('file-name').textContent = `📎 ${_file.name}`;
-    document.getElementById('file-name').classList.remove('hidden');
-    document.getElementById('run-upload-btn').disabled = false;
-  }
-};
-
-// ── Panel routing ──
-window.showPanel = (panel) => {
-  ['overview','meta','data','profile'].forEach(p => document.getElementById(`panel-${p}`).classList.toggle('hidden', p !== panel));
-  ['dashboard','meta-agent','data-agent','profile'].forEach(n => document.getElementById(`nav-${n}`)?.classList.remove('active'));
-  const navMap = { overview:'dashboard', meta:'meta-agent', data:'data-agent', profile:'profile' };
-  document.getElementById(`nav-${navMap[panel]}`)?.classList.add('active');
-  const titles = {
-    overview: ['Agent Dashboard','Run agents via Telegram or directly here'],
-    meta:     ['Meta Ads Agent','Analyze campaign performance and generate reports'],
-    data:     ['Data Cleansing Agent','Scan, clean and export local CSV/Excel files'],
-    profile:  ['My Config','Copy these values into your local clawmarketer.env'],
-  };
-  document.getElementById('page-title').textContent = titles[panel][0];
-  document.getElementById('page-sub').textContent   = titles[panel][1];
-  if (panel === 'profile') populateProfile();
-};
-
-const MASK = '••••••••••••••••';
-let _envRevealed = false;
-
-window.populateProfile = () => {
-  const uid   = window._uid || '';
-  const token = _metaToken  || '';
-  const acct  = _accountId  || '';
-
-  if (!uid) {
-    document.getElementById('profile-no-auth').classList.remove('hidden');
-    document.getElementById('profile-auth').classList.add('hidden');
-    return;
-  }
-  document.getElementById('profile-no-auth').classList.add('hidden');
-  document.getElementById('profile-auth').classList.remove('hidden');
-
-  // Store real values on reveal buttons
-  document.querySelectorAll('.reveal-btn[data-field="uid"]').forEach(b => b.dataset.val = uid);
-  document.querySelectorAll('.reveal-btn[data-field="token"]').forEach(b => b.dataset.val = token || '');
-  document.querySelectorAll('.profile-uid-copy').forEach(b => b.dataset.val = uid);
-  document.querySelectorAll('.profile-token-copy').forEach(b => b.dataset.val = token);
-  document.querySelectorAll('.profile-account').forEach(el => el.textContent = acct || '—');
-  document.querySelectorAll('.profile-account-copy').forEach(b => b.dataset.val = acct);
-
-  // Reset to masked state
-  _envRevealed = false;
-  document.querySelectorAll('.profile-uid').forEach(el => el.textContent = MASK);
-  document.querySelectorAll('.profile-token').forEach(el => el.textContent = MASK);
-  document.querySelectorAll('.reveal-btn').forEach(b => { b.textContent = 'show'; b.dataset.revealed = '0'; });
-  document.getElementById('env-reveal-btn').textContent = 'show values';
-
-  buildEnvPreview(uid, token, acct, false);
-};
-
-function buildEnvPreview(uid, token, acct, revealed) {
-  const mask = s => revealed ? s : MASK;
-  const lines = [
-    `CLAWMARKETER_URL=https://clawmarketer.vercel.app`,
-    `CLAWMARKETER_USER_ID=${mask(uid)}`,
-    `META_ACCESS_TOKEN=${token ? mask(token) : ''}`,
-    `META_AD_ACCOUNT_ID=${acct}`,
-    ``,
-    `# Get from Vercel dashboard → Settings → Environment Variables`,
-    `GROQ_API_KEY=`,
-    ``,
-    `# Get from @BotFather on Telegram`,
-    `TELEGRAM_BOT_TOKEN=`,
-    `# Get from @userinfobot on Telegram`,
-    `TELEGRAM_CHAT_ID=`,
-    ``,
-    `DATA_DIR=~/Documents/data`,
-  ].join('\n');
-  document.getElementById('env-preview').textContent = lines;
-}
-
-window.toggleEnvReveal = () => {
-  _envRevealed = !_envRevealed;
-  const uid   = window._uid || '';
-  const token = _metaToken  || '';
-  const acct  = _accountId  || '';
-  buildEnvPreview(uid, token, acct, _envRevealed);
-  document.getElementById('env-reveal-btn').textContent = _envRevealed ? 'hide values' : 'show values';
-};
-
-window.copyEnvFile = () => {
-  // Always copy real values regardless of reveal state
-  const uid   = window._uid || '';
-  const token = _metaToken  || '';
-  const acct  = _accountId  || '';
-  const lines = [
-    `CLAWMARKETER_URL=https://clawmarketer.vercel.app`,
-    `CLAWMARKETER_USER_ID=${uid}`,
-    `META_ACCESS_TOKEN=${token}`,
-    `META_AD_ACCOUNT_ID=${acct}`,
-    ``,
-    `# Get from Vercel dashboard → Settings → Environment Variables`,
-    `GROQ_API_KEY=`,
-    ``,
-    `# Get from @BotFather on Telegram`,
-    `TELEGRAM_BOT_TOKEN=`,
-    `# Get from @userinfobot on Telegram`,
-    `TELEGRAM_CHAT_ID=`,
-    ``,
-    `DATA_DIR=~/Documents/data`,
-  ].join('\n');
-  navigator.clipboard.writeText(lines);
-  showToast('Copied to clipboard!', 'success');
-};
-
-document.addEventListener('click', e => {
-  const reveal = e.target.closest('.reveal-btn');
-  if (reveal) {
-    const revealed = reveal.dataset.revealed === '1';
-    const field = reveal.dataset.field;
-    const val   = reveal.dataset.val;
-    const display = revealed ? MASK : val;
-    document.querySelectorAll(`.profile-${field}`).forEach(el => el.textContent = display);
-    reveal.textContent = revealed ? 'show' : 'hide';
-    reveal.dataset.revealed = revealed ? '0' : '1';
-    return;
-  }
-  const btn = e.target.closest('.copy-field-btn');
-  if (!btn) return;
-  navigator.clipboard.writeText(btn.dataset.val || '');
-  const orig = btn.textContent;
-  btn.textContent = 'copied!';
-  setTimeout(() => btn.textContent = orig, 1500);
-});
-
-window.switchTab = (e, tab) => {
-  ['campaigns','anomalies','report'].forEach(t => document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tab));
-  e.target.closest('.tab-bar').querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
-  e.target.classList.add('active');
-};
-
-window.switchSource = (e, src) => {
-  ['oauth','upload','demo'].forEach(s => {
-    document.getElementById(`src-panel-${s}`).classList.toggle('hidden', s !== src);
-    document.getElementById(`src-tab-${s}`)?.classList.toggle('active', s === src);
-  });
-};
-
-// ── Toast ──
-window.showToast = (msg, type='info') => {
-  const colors = {success:'var(--green)',error:'var(--red)',info:'#a5b4fc'};
-  const icons  = {success:'✓',error:'✗',info:'·'};
+// ─────────────────────────────────────────────
+// Toast
+// ─────────────────────────────────────────────
+function toast(msg, type = 'info') {
+  const icons = { success: '✓', error: '✕', info: 'i' };
   const el = document.createElement('div');
-  el.className = 'toast-item';
-  el.style.borderLeft = `3px solid ${colors[type]}`;
-  el.innerHTML = `<span style="color:${colors[type]};font-weight:700;margin-right:8px">${icons[type]}</span>${msg}`;
-  document.getElementById('toast').appendChild(el);
+  el.className = `toast toast-${type}`;
+  el.innerHTML = `<span style="font-weight:700;">${icons[type]}</span><span>${msg}</span>`;
+  document.getElementById('toast-container').appendChild(el);
   setTimeout(() => el.remove(), 4000);
+}
+window.toast = toast;
+
+// ─────────────────────────────────────────────
+// Page switching
+// ─────────────────────────────────────────────
+function showPage(id) {
+  ['page-signin','page-wizard','page-app'].forEach(p => {
+    document.getElementById(p).classList.add('hidden');
+  });
+  document.getElementById(id).classList.remove('hidden');
+}
+
+function switchTab(tab) {
+  ['dashboard','agents','runs'].forEach(t => {
+    document.getElementById(`tab-${t}`).classList.add('hidden');
+    document.querySelector(`[data-tab="${t}"]`).classList.remove('active');
+  });
+  document.getElementById(`tab-${tab}`).classList.remove('hidden');
+  document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+}
+window.switchTab = switchTab;
+
+// ─────────────────────────────────────────────
+// Firebase init
+// ─────────────────────────────────────────────
+async function initFirebase() {
+  try {
+    const res = await fetch('/api/config');
+    if (!res.ok) { showPage('page-signin'); return; }
+    const cfg = await res.json();
+    if (!cfg.apiKey) { showPage('page-signin'); return; }
+
+    const app = initializeApp(cfg);
+    _auth = getAuth(app);
+    _db   = getFirestore(app);
+
+    onAuthStateChanged(_auth, user => {
+      if (user) {
+        _user = user;
+        _uid  = user.uid;
+        window._uid = _uid;
+        afterSignIn(user);
+      } else {
+        _user = null;
+        _uid  = null;
+        showPage('page-signin');
+      }
+    });
+  } catch(e) {
+    console.error('Firebase init failed:', e);
+    showPage('page-signin');
+  }
+}
+
+function afterSignIn(user) {
+  updateNavUser(user);
+  const onboarded = localStorage.getItem('cm_onboarded');
+  if (!onboarded) {
+    initWizard();
+    showPage('page-wizard');
+  } else {
+    showPage('page-app');
+    loadDashboard(user);
+  }
+}
+
+function updateNavUser(user) {
+  const nameEl = document.getElementById('nav-user-name');
+  const avatarEl = document.getElementById('nav-avatar');
+  if (user.displayName) nameEl.textContent = user.displayName.split(' ')[0];
+  if (user.photoURL) {
+    avatarEl.src = user.photoURL;
+    avatarEl.classList.remove('hidden');
+  }
+  // Greeting
+  const greetEl = document.getElementById('greeting');
+  if (greetEl) {
+    const hour = new Date().getHours();
+    const part = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
+    const name = user.displayName ? user.displayName.split(' ')[0] : 'there';
+    greetEl.textContent = `Good ${part}, ${name}`;
+  }
+}
+
+// ─────────────────────────────────────────────
+// Auth
+// ─────────────────────────────────────────────
+window.signInWithGoogle = async function() {
+  if (!_auth) { toast('Firebase not configured', 'error'); return; }
+  const btn = document.getElementById('btn-google-signin');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Signing in...';
+  try {
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(_auth, provider);
+  } catch(e) {
+    toast(e.message || 'Sign in failed', 'error');
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/><path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg> Sign in with Google`;
+  }
 };
 
-// expose for onclick handlers
-window.toast = window.showToast;
+window.signOutUser = async function() {
+  if (!_auth) return;
+  try {
+    if (_runsUnsub) { _runsUnsub(); _runsUnsub = null; }
+    await signOut(_auth);
+    showPage('page-signin');
+  } catch(e) {
+    toast('Sign out failed', 'error');
+  }
+};
 
-// ── Init ──
-checkMetaStatus();
+// ─────────────────────────────────────────────
+// Wizard
+// ─────────────────────────────────────────────
+function initWizard() {
+  _wizStep = 0;
+  _metaSkipped = false;
+  // Check if meta already connected
+  if (_metaToken) {
+    document.getElementById('wiz-meta-connected').classList.remove('hidden');
+  }
+  renderWizStep(0);
+  renderSetupPrompt();
+}
+
+function renderWizStep(step) {
+  [0,1,2].forEach(i => {
+    document.getElementById(`wiz-step-${i}`).classList.add('hidden');
+    const dot = document.getElementById(`wdot-${i}`);
+    dot.classList.remove('active','done');
+    if (i < step) dot.classList.add('done');
+    else if (i === step) dot.classList.add('active');
+  });
+  document.getElementById(`wiz-step-${step}`).classList.remove('hidden');
+}
+
+window.wizNext = function() {
+  if (_wizStep === 0 && !_metaToken) _metaSkipped = true;
+  _wizStep++;
+  if (_wizStep === 2) {
+    // Update check icons for done screen
+    const metaIcon = document.getElementById('check-meta-icon');
+    const metaLabel = document.getElementById('check-meta-label');
+    const metaSub = document.getElementById('check-meta-sub');
+    if (_metaToken && !_metaSkipped) {
+      metaIcon.className = 'check-circle ok';
+      metaLabel.textContent = 'Meta Ads connected';
+      metaSub.textContent = 'Ready to analyze your campaigns';
+    } else {
+      metaIcon.className = 'check-circle skip';
+      metaLabel.textContent = 'Meta Ads skipped';
+      metaSub.textContent = 'Connect later from the Agents panel';
+    }
+  }
+  renderWizStep(_wizStep);
+};
+
+window.finishOnboarding = function() {
+  localStorage.setItem('cm_onboarded', '1');
+  showPage('page-app');
+  if (_user) loadDashboard(_user);
+};
+
+window.connectMeta = function() {
+  window.location.href = '/auth/meta';
+};
+
+// ─────────────────────────────────────────────
+// Model picker & prompt
+// ─────────────────────────────────────────────
+const MODEL_CONFIG = {
+  groq:       { name: 'Groq',       keyName: 'GROQ_API_KEY',       model: 'groq/llama-3.3-70b-versatile' },
+  anthropic:  { name: 'Anthropic',  keyName: 'ANTHROPIC_API_KEY',  model: 'anthropic/claude-sonnet-4-6' },
+  openai:     { name: 'OpenAI',     keyName: 'OPENAI_API_KEY',     model: 'openai/gpt-4o' },
+  openrouter: { name: 'OpenRouter', keyName: 'OPENROUTER_API_KEY', model: 'openrouter/anthropic/claude-sonnet-4-5' },
+  other:      { name: 'your AI',    keyName: 'AI_API_KEY',         model: 'your-provider/your-model' },
+};
+
+function buildSetupPrompt(modelKey) {
+  const m = MODEL_CONFIG[modelKey];
+  return `I'm setting up ClawMarketer on my machine. Please do the following:
+
+1. Check if OpenClaw is installed (run: which openclaw).
+   If not: curl -fsSL https://openclaw.ai/install.sh | bash
+
+2. Clone the ClawMarketer repo:
+   git clone https://github.com/muhammadegaa/clawmarketer ~/clawmarketer
+
+3. Install Python dependencies:
+   cd ~/clawmarketer && pip install -r requirements.txt
+
+4. Copy the ClawMarketer skills into OpenClaw:
+   mkdir -p ~/.openclaw/workspace/skills
+   cp -r ~/clawmarketer/skills/* ~/.openclaw/workspace/skills/
+
+5. Configure OpenClaw to use ${m.name} as its AI model.
+   In ~/.openclaw/openclaw.json set the primary model to: "${m.model}"
+   Add my ${m.keyName} to ~/.openclaw/agents/main/auth-profiles.json
+   (I will fill in the actual key value myself)
+
+6. Restart and verify:
+   openclaw restart
+   openclaw skills list
+
+Tell me when done. I will manually add ${m.keyName}, TELEGRAM_BOT_TOKEN, and TELEGRAM_CHAT_ID to ~/clawmarketer/clawmarketer.env.`;
+}
+
+function renderSetupPrompt() {
+  const el = document.getElementById('setup-prompt-code');
+  if (el) el.textContent = buildSetupPrompt(_selectedModel);
+}
+
+window.selectModel = function(key) {
+  _selectedModel = key;
+  document.querySelectorAll('.model-pill').forEach(p => {
+    p.classList.toggle('selected', p.dataset.model === key);
+  });
+  renderSetupPrompt();
+};
+
+window.copySetupPrompt = async function() {
+  const text = buildSetupPrompt(_selectedModel);
+  try {
+    await navigator.clipboard.writeText(text);
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = 'Copied!';
+    btn.style.color = '#4ade80';
+    setTimeout(() => { btn.textContent = 'Copy'; btn.style.color = ''; }, 2000);
+    toast('Prompt copied to clipboard', 'success');
+  } catch {
+    toast('Copy failed — select the text manually', 'error');
+  }
+};
+
+// ─────────────────────────────────────────────
+// Run agent
+// ─────────────────────────────────────────────
+window.runAgent = async function() {
+  const btn = document.getElementById('btn-run');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Running...';
+  try {
+    const res = await fetch('/api/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date_preset: 'last_30d', account_id: _accountId, meta_token: _metaToken })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      toast('Agent run started', 'success');
+    } else {
+      toast(data.error || 'Run failed', 'error');
+    }
+  } catch(e) {
+    toast('Network error — is the server running?', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Run Meta Ads Agent`;
+  }
+};
+
+window.runDemo = async function() {
+  const btn = document.getElementById('btn-demo');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner spinner-indigo"></div> Running demo...';
+  try {
+    const res = await fetch('/api/demo', { method: 'POST' });
+    const data = await res.json();
+    if (res.ok) {
+      toast('Demo run started', 'success');
+    } else {
+      toast(data.error || 'Demo failed', 'error');
+    }
+  } catch(e) {
+    toast('Network error — is the server running?', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg> Run Demo`;
+  }
+};
+
+// ─────────────────────────────────────────────
+// Dashboard & Firestore
+// ─────────────────────────────────────────────
+function loadDashboard(user) {
+  updateNavUser(user);
+  if (_db && _uid) {
+    subscribeRuns();
+  }
+}
+
+function subscribeRuns() {
+  if (_runsUnsub) _runsUnsub();
+  try {
+    const q = query(
+      collection(_db, 'users', _uid, 'runs'),
+      orderBy('updated_at', 'desc'),
+      limit(10)
+    );
+    _runsUnsub = onSnapshot(q, snap => {
+      const runs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderLastRun(runs[0] || null);
+      renderRunsTable(runs);
+      renderDashboardStats(runs[0] || null);
+    }, err => {
+      console.warn('Firestore subscription error:', err);
+    });
+  } catch(e) {
+    console.warn('Firestore not available:', e);
+  }
+}
+
+function renderDashboardStats(run) {
+  if (!run || !run.meta) return;
+  const m = run.meta;
+  if (m.spend)     document.getElementById('stat-spend').textContent = '$' + Number(m.spend).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  if (m.ctr)       document.getElementById('stat-ctr').textContent = Number(m.ctr).toFixed(2) + '%';
+  if (m.roas)      document.getElementById('stat-roas').textContent = Number(m.roas).toFixed(2) + 'x';
+  if (m.campaigns) document.getElementById('stat-campaigns').textContent = m.campaigns;
+}
+
+const STAGE_LABELS = ['Fetching data', 'Analyzing', 'Generating report', 'Sending via Telegram'];
+
+function renderLastRun(run) {
+  const container = document.getElementById('last-run-content');
+  const timeEl    = document.getElementById('last-run-time');
+
+  if (!run) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">&#9881;</div>
+        <p style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:6px;">No runs yet</p>
+        <p style="font-size:13px;color:var(--sub);">Trigger your agent via Telegram or click "Run now" below.</p>
+      </div>`;
+    timeEl.textContent = '';
+    return;
+  }
+
+  if (run.updated_at) {
+    const d = run.updated_at.toDate ? run.updated_at.toDate() : new Date(run.updated_at);
+    timeEl.textContent = timeAgo(d);
+  }
+
+  const stages = run.stages || [];
+  const stageHtml = STAGE_LABELS.map((label, i) => {
+    const s = stages[i] || {};
+    const status = s.status || (i < stages.length ? 'done' : 'pending');
+    const icon = status === 'done' ? '&#10003;' : status === 'running' ? '<div class="spinner" style="width:11px;height:11px;border-width:1.5px;"></div>' : status === 'error' ? '&#10005;' : String(i + 1);
+    return `
+      <div class="stage-row">
+        <div class="stage-icon ${status}">${icon}</div>
+        <div>
+          <p style="font-size:13px;font-weight:500;">${label}</p>
+          ${s.note ? `<p style="font-size:12px;color:var(--sub);margin-top:2px;">${s.note}</p>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+
+  const overallStatus = run.status || 'pending';
+  const badgeClass = overallStatus === 'done' ? 'success' : overallStatus === 'running' ? 'running' : overallStatus === 'error' ? 'error' : 'pending';
+
+  container.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <span class="run-badge ${badgeClass}">
+        <div class="dot dot-${overallStatus === 'done' ? 'green' : overallStatus === 'running' ? 'indigo' : overallStatus === 'error' ? 'red' : 'grey'}"></div>
+        ${overallStatus}
+      </span>
+      <span style="font-size:12px;color:var(--sub);font-family:monospace;">${run.id || ''}</span>
+    </div>
+    <div>${stageHtml}</div>`;
+
+  // Update agent last-run text
+  document.getElementById('agent-meta-last-run').textContent = run.updated_at ? `Last run: ${timeEl.textContent}` : 'No runs yet';
+}
+
+function renderRunsTable(runs) {
+  const wrap = document.getElementById('runs-table-wrap');
+  if (!runs || runs.length === 0) {
+    wrap.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">&#128202;</div>
+        <p style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:6px;">No runs yet</p>
+        <p style="font-size:13px;color:var(--sub);">Start your first agent run from the Dashboard tab.</p>
+      </div>`;
+    return;
+  }
+
+  const rows = runs.map(run => {
+    const status = run.status || 'pending';
+    const badgeClass = status === 'done' ? 'success' : status === 'running' ? 'running' : status === 'error' ? 'error' : 'pending';
+    const date = run.updated_at
+      ? (run.updated_at.toDate ? run.updated_at.toDate() : new Date(run.updated_at)).toLocaleDateString()
+      : '—';
+    const m = run.meta || {};
+    return `
+      <tr>
+        <td style="font-family:monospace;font-size:12px;color:var(--sub);">${(run.id || '').slice(0,12)}</td>
+        <td>Meta Ads Analyzer</td>
+        <td>${date}</td>
+        <td><span class="run-badge ${badgeClass}">${status}</span></td>
+        <td>${m.spend ? '$' + Number(m.spend).toLocaleString() : '—'}</td>
+        <td>${m.ctr ? Number(m.ctr).toFixed(2) + '%' : '—'}</td>
+        <td>${m.roas ? Number(m.roas).toFixed(2) + 'x' : '—'}</td>
+      </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <table class="runs-table">
+      <thead>
+        <tr>
+          <th>Run ID</th>
+          <th>Agent</th>
+          <th>Date</th>
+          <th>Status</th>
+          <th>Spend</th>
+          <th>CTR</th>
+          <th>ROAS</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+// ─────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────
+function timeAgo(date) {
+  const secs = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (secs < 60)   return `${secs}s ago`;
+  if (secs < 3600) return `${Math.floor(secs/60)}m ago`;
+  if (secs < 86400) return `${Math.floor(secs/3600)}h ago`;
+  return `${Math.floor(secs/86400)}d ago`;
+}
+
+// ─────────────────────────────────────────────
+// Responsive: collapse stats grid on mobile
+// ─────────────────────────────────────────────
+function applyResponsive() {
+  const grid = document.getElementById('stats-grid');
+  const agentsGrid = document.getElementById('agents-grid');
+  if (!grid) return;
+  if (window.innerWidth < 640) {
+    grid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+  } else {
+    grid.style.gridTemplateColumns = 'repeat(4, 1fr)';
+  }
+  if (agentsGrid) {
+    agentsGrid.style.gridTemplateColumns = window.innerWidth < 640 ? '1fr' : 'repeat(2, 1fr)';
+  }
+  // Fix dashboard two-col layout
+  const dashTwo = document.querySelector('#tab-dashboard .app-content > div:last-child');
+  // handled inline already
+}
+window.addEventListener('resize', applyResponsive);
+
+// ─────────────────────────────────────────────
+// Boot
+// ─────────────────────────────────────────────
+applyResponsive();
+initFirebase();
 </script>
 </body>
 </html>
