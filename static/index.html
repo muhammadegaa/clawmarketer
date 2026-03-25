@@ -556,14 +556,15 @@ if (auth) {
 let _metaToken  = localStorage.getItem('meta_token') || null;
 let _accountId  = null;
 
-// Pick up token from URL after OAuth redirect
-const _urlParams = new URLSearchParams(window.location.search);
-const _urlToken  = _urlParams.get('meta_token');
-if (_urlToken) {
-  _metaToken = _urlToken;
-  localStorage.setItem('meta_token', _metaToken);
-  // Clean URL
-  window.history.replaceState({}, '', '/');
+// Pick up token from URL after OAuth redirect (?meta_token=... URL-encoded)
+{
+  const _urlParams = new URLSearchParams(window.location.search);
+  const _urlToken  = _urlParams.get('meta_token');
+  if (_urlToken) {
+    _metaToken = _urlToken; // URLSearchParams auto-decodes percent-encoding
+    localStorage.setItem('meta_token', _metaToken);
+    window.history.replaceState({}, '', '/');
+  }
 }
 
 async function checkMetaStatus() {

@@ -1,7 +1,8 @@
 import os
 import secrets
 import tempfile
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request
+from urllib.parse import quote
+from fastapi import FastAPI, HTTPException, UploadFile, File, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, RedirectResponse, JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
@@ -161,9 +162,27 @@ def meta_callback(request: Request, code: str = None, state: str = None, error: 
     if "access_token" in extended:
         access_token = extended["access_token"]
 
-    # Pass token to frontend via URL fragment — browser stores in localStorage.
-    # This avoids server-side session entirely (works on Vercel serverless).
-    return RedirectResponse(f"/?meta_token={access_token}")
+    # Pass token to frontend via URL param (URL-encoded — token can contain | and other special chars).
+    return RedirectResponse(f"/?meta_token={quote(access_token, safe='')}")
+
+
+def _fetch_ad_accounts(token: str) -> list:
+    """Try all Meta endpoints to find ad accounts for this token."""
+    base = "https://graph.facebook.com/v21.0"
+    endpoints = [
+        f"{base}/me/adaccounts",
+        f"{base}/me/assigned_ad_accounts",
+        f"{base}/me/personal_ad_accounts",
+    ]
+    for url in endpoints:
+        resp = http.get(url, params={"access_token": token, "fields": "id,name", "limit": 50})
+        data = resp.json()
+        if "error" in data:
+            continue
+        accounts = [{"id": a["id"], "name": a.get("name", a["id"])} for a in data.get("data", [])]
+        if accounts:
+            return accounts
+    return []
 
 
 @app.get("/auth/status")
@@ -172,19 +191,12 @@ def auth_status(token: str = None):
     if not token:
         return {"connected": False}
 
-    resp = http.get(META_ACCOUNTS_URL, params={
-        "access_token": token,
-        "fields": "id,name",
-        "limit": 20,
-    })
-    data = resp.json()
-    if "error" in data:
-        return {"connected": False, "error": data["error"].get("message", "")}
+    # Verify token works at all
+    me = http.get("https://graph.facebook.com/v21.0/me", params={"access_token": token, "fields": "id"})
+    if "error" in me.json():
+        return {"connected": False}
 
-    accounts = [
-        {"id": a["id"], "name": a.get("name", a["id"])}
-        for a in data.get("data", [])
-    ]
+    accounts = _fetch_ad_accounts(token)
     return {"connected": True, "accounts": accounts}
 
 
@@ -211,14 +223,10 @@ def run_live(body: RunRequest):
     # Auto-fetch ad account — user never needs to provide this
     account_id = body.account_id
     if not account_id:
-        resp = http.get(META_ACCOUNTS_URL, params={"access_token": token, "fields": "id", "limit": 10})
-        data = resp.json()
-        if "error" in data:
-            raise HTTPException(status_code=401, detail="Meta token expired. Please reconnect.")
-        accounts = [a["id"] for a in data.get("data", [])]
+        accounts = _fetch_ad_accounts(token)
         if not accounts:
-            raise HTTPException(status_code=400, detail="No Meta ad accounts found on this account.")
-        account_id = accounts[0]
+            raise HTTPException(status_code=400, detail="No Meta ad accounts found. Make sure your Meta account has an active Ads account.")
+        account_id = accounts[0]["id"]
 
     try:
         df_raw = fetcher.fetch(
