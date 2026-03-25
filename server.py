@@ -29,6 +29,48 @@ META_ACCOUNTS_URL = "https://graph.facebook.com/v21.0/me/adaccounts"
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
+def _push_to_firestore(user_id: str, run_id: str, skill: str, status: str,
+                       triggered_by: str = "manual", result: dict = None):
+    """Write a completed run document directly to Firestore."""
+    project_id = os.getenv("FIREBASE_PROJECT_ID", "")
+    api_key    = os.getenv("FIREBASE_API_KEY", "")
+    if not project_id:
+        return
+
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc).isoformat()
+
+    def to_fs(value):
+        if value is None:           return {"nullValue": None}
+        if isinstance(value, bool): return {"booleanValue": value}
+        if isinstance(value, int):  return {"integerValue": str(value)}
+        if isinstance(value, float):return {"doubleValue": value}
+        if isinstance(value, str):  return {"stringValue": value}
+        if isinstance(value, list): return {"arrayValue": {"values": [to_fs(v) for v in value]}}
+        if isinstance(value, dict): return {"mapValue": {"fields": {k: to_fs(v) for k, v in value.items()}}}
+        return {"stringValue": str(value)}
+
+    fields = {
+        "run_id":       to_fs(run_id),
+        "skill":        to_fs(skill),
+        "status":       to_fs(status),
+        "triggered_by": to_fs(triggered_by),
+        "created_at":   to_fs(now),
+        "updated_at":   to_fs(now),
+    }
+    if result:
+        fields["result"] = to_fs(result)
+
+    url = (f"https://firestore.googleapis.com/v1/projects/{project_id}"
+           f"/databases/(default)/documents/users/{user_id}/runs/{run_id}")
+    try:
+        http.patch(url, json={"fields": fields},
+                   params={"key": api_key,
+                           "updateMask.fieldPaths": list(fields.keys())})
+    except Exception as e:
+        print(f"[Firestore] _push_to_firestore failed: {e}")
+
+
 def _serialize(results: dict, clean_stats: dict) -> dict:
     campaign_rows = []
     if not results["campaign_summary"].empty:
@@ -332,7 +374,7 @@ async def upload_csv(file: UploadFile = File(...)):
 # ── Demo ──────────────────────────────────────────────────────────────────────
 
 @app.post("/api/demo")
-def run_demo():
+def run_demo(uid: str = ""):
     groq_key = os.getenv("GROQ_API_KEY", "")
     from sample_data import generate
     csv_path = generate()
@@ -343,6 +385,21 @@ def run_demo():
         results["report"] = reporter.generate(results, groq_key)
     except Exception as e:
         results["report"] = f"AI report unavailable: {str(e)}"
+
+    # Push demo run to Firestore so it appears in agents/runs tabs
+    if uid:
+        from datetime import datetime, timezone
+        import uuid as _uuid
+        run_id = "demo_" + datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S") + "_" + _uuid.uuid4().hex[:6]
+        o = results.get("overall", {})
+        _push_to_firestore(uid, run_id, skill="clawmarketer-meta", status="done", triggered_by="demo", result={
+            "total_spend":   o.get("total_spend", 0),
+            "overall_ctr":   o.get("overall_ctr", 0),
+            "avg_roas":      o.get("avg_roas", 0),
+            "num_campaigns": o.get("num_campaigns", 0),
+            "report_text":   results.get("report", ""),
+        })
+
     return _serialize(results, clean_stats)
 
 
