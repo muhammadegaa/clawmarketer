@@ -95,9 +95,6 @@ def index():
 def onboarding():
     return FileResponse("static/onboarding.html")
 
-@app.get("/prompts")
-def prompts():
-    return FileResponse("static/prompts.html")
 
 @app.get("/api/config")
 def get_config():
@@ -295,26 +292,31 @@ def run_demo():
 # ── OpenClaw config download ───────────────────────────────────────────────────
 
 @app.get("/api/openclaw-config")
-def openclaw_config(request: Request, uid: str):
+def openclaw_config(uid: str, token: str = ""):
     """Generate a pre-filled .env for the user's OpenClaw setup."""
     if not uid:
         raise HTTPException(status_code=400, detail="Missing uid")
 
-    meta_token = request.session.get("meta_token", "")
+    meta_token = token
+
+    deployed_url = os.getenv("VERCEL_URL", "https://clawmarketer.vercel.app")
+    if deployed_url and not deployed_url.startswith("http"):
+        deployed_url = f"https://{deployed_url}"
 
     lines = [
         "# ClawMarketer — OpenClaw Agent Config",
         "# Generated from clawmarketer.vercel.app",
         "",
-        f"FIREBASE_PROJECT_ID={os.getenv('FIREBASE_PROJECT_ID', '')}",
-        f"FIREBASE_API_KEY={os.getenv('FIREBASE_API_KEY', '')}",
+        f"CLAWMARKETER_URL={deployed_url}",
         f"CLAWMARKETER_USER_ID={uid}",
         "",
-        "# Paste your Meta Ads token (from ClawMarketer → Connect Meta Ads)",
+        "# Meta Ads token (pre-filled from your connected account)",
         f"META_ACCESS_TOKEN={meta_token}",
-        "META_AD_ACCOUNT_ID=",
         "",
         f"GROQ_API_KEY={os.getenv('GROQ_API_KEY', '')}",
+        "",
+        "# Set this to the folder you want the data cleansing agent to scan",
+        "DATA_DIR=~/Documents/data",
     ]
 
     from fastapi.responses import Response
