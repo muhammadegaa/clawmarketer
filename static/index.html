@@ -418,6 +418,15 @@
       <p style="color:var(--sub);font-size:14px;">Here's what your agents have been up to.</p>
     </div>
 
+    <!-- Setup checklist (shown until dismissed) -->
+    <div id="setup-checklist" class="card" style="padding:18px 20px;margin-bottom:24px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <span style="font-size:13px;font-weight:600;">Setup checklist</span>
+        <button onclick="dismissChecklist()" style="background:none;border:none;color:var(--sub);font-size:12px;cursor:pointer;padding:2px 6px;border-radius:4px;" title="Dismiss">✕</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;" id="checklist-items"></div>
+    </div>
+
     <!-- Stats row -->
     <div class="stats-grid" id="stats-grid">
       <div class="card stat-card">
@@ -611,7 +620,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
   from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-import { getFirestore, collection, query, orderBy, limit, onSnapshot }
+import { getFirestore, collection, query, orderBy, limit, onSnapshot, doc, getDoc, setDoc }
   from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 // ─────────────────────────────────────────────
@@ -703,9 +712,19 @@ async function initFirebase() {
   }
 }
 
-function afterSignIn(user) {
+async function afterSignIn(user) {
   updateNavUser(user);
-  const onboarded = localStorage.getItem('cm_onboarded');
+  // Check Firestore first, fall back to localStorage for offline/slow loads
+  let onboarded = localStorage.getItem(`cm_onboarded_${user.uid}`);
+  if (!onboarded && _db) {
+    try {
+      const snap = await getDoc(doc(_db, 'users', user.uid, 'meta', 'profile'));
+      if (snap.exists() && snap.data().onboarded) {
+        onboarded = '1';
+        localStorage.setItem(`cm_onboarded_${user.uid}`, '1');
+      }
+    } catch(e) { /* Firestore unavailable — fall through to wizard */ }
+  }
   if (!onboarded) {
     initWizard();
     showPage('page-wizard');
@@ -811,8 +830,17 @@ window.wizNext = function() {
   renderWizStep(_wizStep);
 };
 
-window.finishOnboarding = function() {
-  localStorage.setItem('cm_onboarded', '1');
+window.finishOnboarding = async function() {
+  if (_uid) {
+    localStorage.setItem(`cm_onboarded_${_uid}`, '1');
+    if (_db) {
+      try {
+        await setDoc(doc(_db, 'users', _uid, 'meta', 'profile'),
+          { onboarded: true, onboardedAt: new Date().toISOString() },
+          { merge: true });
+      } catch(e) { /* non-fatal */ }
+    }
+  }
   showPage('page-app');
   if (_user) loadDashboard(_user);
 };
@@ -971,10 +999,59 @@ window.disconnectMeta = function() {
 function loadDashboard(user) {
   updateNavUser(user);
   renderTriggerCmds();
+  renderChecklist([]);
   if (_db && _uid) {
     subscribeRuns();
   }
 }
+
+// ─────────────────────────────────────────────
+// Setup checklist
+// ─────────────────────────────────────────────
+function renderChecklist(runs) {
+  const el = document.getElementById('setup-checklist');
+  if (!el) return;
+  // Don't show if user dismissed
+  if (localStorage.getItem(`cm_checklist_dismissed_${_uid}`)) { el.style.display = 'none'; return; }
+
+  const steps = [
+    {
+      label: 'Connect Meta Ads',
+      done: !!_metaToken,
+      action: !_metaToken ? `<button class="btn btn-primary btn-sm" onclick="switchTab('integrations')">Connect →</button>` : null,
+    },
+    {
+      label: 'Set up your local agent (OpenClaw + skills)',
+      done: runs.length > 0,
+      action: runs.length === 0 ? `<button class="btn btn-secondary btn-sm" onclick="switchTab('agents')">Setup guide →</button>` : null,
+    },
+    {
+      label: 'Run your first agent via Telegram',
+      done: runs.some(r => r.triggered_by !== 'demo'),
+      action: null,
+    },
+  ];
+
+  const allDone = steps.every(s => s.done);
+  if (allDone) { el.style.display = 'none'; return; }
+  el.style.display = '';
+
+  document.getElementById('checklist-items').innerHTML = steps.map(s => `
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:18px;height:18px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+        background:${s.done ? 'rgba(34,197,94,.15)' : 'var(--border2)'};border:1px solid ${s.done ? 'rgba(34,197,94,.3)' : 'var(--border2)'};font-size:10px;">
+        ${s.done ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+      </div>
+      <span style="flex:1;font-size:13px;color:${s.done ? 'var(--sub)' : 'var(--text)'};${s.done ? 'text-decoration:line-through;' : ''}">${s.label}</span>
+      ${s.action && !s.done ? s.action : ''}
+    </div>`).join('');
+}
+
+window.dismissChecklist = function() {
+  if (_uid) localStorage.setItem(`cm_checklist_dismissed_${_uid}`, '1');
+  const el = document.getElementById('setup-checklist');
+  if (el) el.style.display = 'none';
+};
 
 function subscribeRuns() {
   if (_runsUnsub) _runsUnsub();
@@ -990,6 +1067,7 @@ function subscribeRuns() {
       renderRunsTable(runs);
       renderAgentsGrid(runs);
       renderDashboardStats(runs[0] || null);
+      renderChecklist(runs);
     }, err => {
       console.warn('Firestore subscription error:', err);
     });
