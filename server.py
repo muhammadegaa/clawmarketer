@@ -44,16 +44,23 @@ def _serialize(results: dict, clean_stats: dict) -> dict:
                 "cpc":         round(float(row[cpc_col]), 2)        if cpc_col       and row[cpc_col]              == row[cpc_col]       else None,
                 "roas":        round(float(row["roas"]), 2)         if "roas"        in row and row["roas"]        == row["roas"]        else None,
             })
+    overall = results["overall"]
     return {
         "clean_stats": {
             "original_rows": clean_stats["original_rows"],
             "clean_rows":    clean_stats["clean_rows"],
             "dropped_rows":  clean_stats["dropped_rows"],
         },
-        "overall":   results["overall"],
-        "campaigns": campaign_rows,
-        "anomalies": results["anomalies"],
-        "report":    results.get("report", ""),
+        "overall":       overall,
+        "campaigns":     campaign_rows,
+        "anomalies":     results["anomalies"],
+        "report":        results.get("report", ""),
+        # Flat aliases for dashboard updateStats()
+        "total_spend":   overall.get("total_spend", 0),
+        "overall_ctr":   overall.get("overall_ctr", 0),
+        "avg_roas":      overall.get("avg_roas", 0),
+        "num_campaigns": overall.get("num_campaigns", 0),
+        "report_text":   results.get("report", ""),
     }
 
 
@@ -193,22 +200,23 @@ def disconnect(request: Request):
 
 # ── Run pipeline with live Meta data ─────────────────────────────────────────
 
+class RunRequest(BaseModel):
+    date_preset: str = "last_30d"
+    account_id: Optional[str] = None
+
 @app.post("/api/run")
-def run_live(
-    request: Request,
-    account_id: str = Form(...),
-    groq_api_key: str = Form(...),
-    date_preset: str = Form("last_30d"),
-):
+def run_live(request: Request, body: RunRequest):
     token = request.session.get("meta_token")
     if not token:
         raise HTTPException(status_code=401, detail="Not connected to Meta. Please reconnect.")
+
+    account_id = body.account_id or os.getenv("META_AD_ACCOUNT_ID", "")
 
     try:
         df_raw = fetcher.fetch(
             access_token=token,
             ad_account_id=account_id,
-            date_preset=date_preset,
+            date_preset=body.date_preset,
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Meta API error: {str(e)}")
@@ -216,32 +224,35 @@ def run_live(
     if df_raw.empty:
         raise HTTPException(status_code=404, detail="No data returned for this account and date range.")
 
-    return _run_pipeline(df_raw, groq_api_key)
+    return _run_pipeline(df_raw, os.getenv("GROQ_API_KEY", ""))
 
 
 # ── Upload CSV ────────────────────────────────────────────────────────────────
 
 @app.post("/api/upload")
-async def upload_csv(file: UploadFile = File(...), groq_api_key: str = Form(...)):
-    if not file.filename.endswith(".csv"):
-        raise HTTPException(status_code=400, detail="File must be a CSV.")
+async def upload_csv(file: UploadFile = File(...)):
+    suffix = ".csv"
+    if file.filename.endswith(".xlsx"):
+        suffix = ".xlsx"
+    elif file.filename.endswith(".xls"):
+        suffix = ".xls"
 
     contents = await file.read()
-    with tempfile.NamedTemporaryFile(mode="wb", suffix=".csv", delete=False) as tmp:
+    with tempfile.NamedTemporaryFile(mode="wb", suffix=suffix, delete=False) as tmp:
         tmp.write(contents)
         tmp_path = tmp.name
 
     try:
         df, clean_stats = cleaner.clean(tmp_path)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Could not parse CSV: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Could not parse file: {str(e)}")
     finally:
         if os.path.exists(tmp_path):
             os.unlink(tmp_path)
 
     results = analyzer.run(df)
     try:
-        results["report"] = reporter.generate(results, groq_api_key)
+        results["report"] = reporter.generate(results, os.getenv("GROQ_API_KEY", ""))
     except Exception as e:
         results["report"] = f"AI report unavailable: {str(e)}"
 
@@ -251,14 +262,130 @@ async def upload_csv(file: UploadFile = File(...), groq_api_key: str = Form(...)
 # ── Demo ──────────────────────────────────────────────────────────────────────
 
 @app.post("/api/demo")
-def run_demo(groq_api_key: str):
+def run_demo():
+    groq_key = os.getenv("GROQ_API_KEY", "")
     from sample_data import generate
     csv_path = generate()
     df, clean_stats = cleaner.clean(csv_path)
     os.unlink(csv_path)
     results = analyzer.run(df)
     try:
-        results["report"] = reporter.generate(results, groq_api_key)
+        results["report"] = reporter.generate(results, groq_key)
     except Exception as e:
         results["report"] = f"AI report unavailable: {str(e)}"
     return _serialize(results, clean_stats)
+
+
+# ── OpenClaw config download ───────────────────────────────────────────────────
+
+@app.get("/api/openclaw-config")
+def openclaw_config(request: Request, uid: str):
+    """Generate a pre-filled .env for the user's OpenClaw setup."""
+    if not uid:
+        raise HTTPException(status_code=400, detail="Missing uid")
+
+    meta_token = request.session.get("meta_token", "")
+
+    lines = [
+        "# ClawMarketer — OpenClaw Agent Config",
+        "# Generated from clawmarketer.vercel.app",
+        "",
+        f"FIREBASE_PROJECT_ID={os.getenv('FIREBASE_PROJECT_ID', '')}",
+        f"FIREBASE_API_KEY={os.getenv('FIREBASE_API_KEY', '')}",
+        f"CLAWMARKETER_USER_ID={uid}",
+        "",
+        "# Paste your Meta Ads token (from ClawMarketer → Connect Meta Ads)",
+        f"META_ACCESS_TOKEN={meta_token}",
+        "META_AD_ACCOUNT_ID=",
+        "",
+        f"GROQ_API_KEY={os.getenv('GROQ_API_KEY', '')}",
+    ]
+
+    from fastapi.responses import Response
+    return Response(
+        content="\n".join(lines),
+        media_type="text/plain",
+        headers={"Content-Disposition": "attachment; filename=clawmarketer.env"}
+    )
+
+
+# ── OpenClaw progress push ─────────────────────────────────────────────────────
+
+class ProgressPayload(BaseModel):
+    user_id: str
+    run_id: str
+    stage: int
+    status: str
+    message: str
+    done: bool = False
+    result: Optional[dict] = None
+
+@app.post("/api/agent/push")
+def agent_push(payload: ProgressPayload):
+    """OpenClaw pushes progress/results here. Forwarded to Firestore via REST."""
+    project_id = os.getenv("FIREBASE_PROJECT_ID", "")
+    api_key    = os.getenv("FIREBASE_API_KEY", "")
+
+    if not project_id:
+        # No Firebase — just ack (local dev without Firebase)
+        return {"ok": True}
+
+    def to_fs(value):
+        if value is None:           return {"nullValue": None}
+        if isinstance(value, bool): return {"booleanValue": value}
+        if isinstance(value, int):  return {"integerValue": str(value)}
+        if isinstance(value, float):return {"doubleValue": value}
+        if isinstance(value, str):  return {"stringValue": value}
+        if isinstance(value, list): return {"arrayValue": {"values": [to_fs(v) for v in value]}}
+        if isinstance(value, dict): return {"mapValue": {"fields": {k: to_fs(v) for k, v in value.items()}}}
+        return {"stringValue": str(value)}
+
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc).isoformat()
+
+    # Overall run status: "running" until done=True
+    overall_status = "done" if payload.done else ("error" if payload.status == "error" else "running")
+
+    # Build the stage map entry for this specific stage
+    stage_entry = {
+        "status":  payload.status,
+        "message": payload.message,
+    }
+
+    # Top-level document fields
+    doc_fields: dict = {
+        "run_id":     to_fs(payload.run_id),
+        "status":     to_fs(overall_status),
+        "updated_at": to_fs(now),
+        f"stages.{payload.stage}": to_fs(stage_entry),
+    }
+
+    # On first stage, also set created_at
+    if payload.stage == 1:
+        doc_fields["created_at"] = to_fs(now)
+
+    # If final result provided, store it
+    if payload.result:
+        doc_fields["result"] = to_fs(payload.result)
+
+    url = (
+        f"https://firestore.googleapis.com/v1/projects/{project_id}"
+        f"/databases/(default)/documents"
+        f"/users/{payload.user_id}/runs/{payload.run_id}"
+    )
+
+    # Use field mask update so we don't wipe other stages
+    update_mask_fields = list(doc_fields.keys())
+    params = {"key": api_key}
+    for field in update_mask_fields:
+        params.setdefault("updateMask.fieldPaths", [])
+        if isinstance(params["updateMask.fieldPaths"], list):
+            params["updateMask.fieldPaths"].append(field)
+
+    resp = http.patch(url, json={"fields": doc_fields}, params=params)
+
+    if resp.status_code not in (200, 201):
+        # Log but don't fail — agent should keep running even if dashboard push fails
+        print(f"[Firestore] Push failed {resp.status_code}: {resp.text[:200]}")
+
+    return {"ok": True}

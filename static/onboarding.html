@@ -3,194 +3,230 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Setup Guide — ClawMarketer</title>
+  <title>Setup — ClawMarketer</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { background: #0f0f0f; }
-    .card { background: #1a1a1a; border: 1px solid #2a2a2a; }
-    .step-num { width: 28px; height: 28px; border-radius: 50%; background: #1e1b4b; color: #a5b4fc; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
-    .code-block { background: #0a0a0a; border: 1px solid #2a2a2a; border-radius: 8px; padding: 14px 16px; font-family: 'Monaco', monospace; font-size: 13px; color: #a5b4fc; overflow-x: auto; position: relative; }
-    .copy-btn { position: absolute; top: 10px; right: 10px; background: #1a1a1a; border: 1px solid #333; border-radius: 6px; padding: 3px 10px; font-size: 11px; color: #9ca3af; cursor: pointer; }
-    .copy-btn:hover { color: #fff; border-color: #555; }
-    .nav-link { color: #6b7280; font-size: 14px; cursor: pointer; transition: color 0.2s; text-decoration: none; }
-    .nav-link:hover { color: #d1d5db; }
-    .tag { background: #1e1b4b; color: #a5b4fc; border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 500; }
+    :root {
+      --bg:      #080810;
+      --surface: #0f0f1a;
+      --card:    #13131f;
+      --border:  #1e1e2e;
+      --border2: #2a2a3e;
+      --indigo:  #6366f1;
+      --green:   #22c55e;
+      --text:    #e2e8f0;
+      --sub:     #6b7280;
+      --sub2:    #4b5563;
+    }
+    * { box-sizing: border-box; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+    .card  { background: var(--card); border: 1px solid var(--border); border-radius: 12px; }
+    .card-sm { background: var(--card); border: 1px solid var(--border); border-radius: 8px; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: all .15s; text-decoration: none; }
+    .btn-primary { background: var(--indigo); color: #fff; }
+    .btn-primary:hover { background: #4f46e5; }
+    .code-block { background: #07070e; border: 1px solid var(--border2); border-radius: 8px; padding: 14px 16px; font-family: 'JetBrains Mono','Fira Code','Monaco',monospace; font-size: 12px; color: #a5b4fc; overflow-x: auto; position: relative; white-space: pre; }
+    .copy-btn { position: absolute; top: 8px; right: 8px; background: var(--border); border: 1px solid var(--border2); border-radius: 6px; padding: 3px 10px; font-size: 11px; color: var(--sub); cursor: pointer; font-family: system-ui; }
+    .copy-btn:hover { color: var(--text); }
+    .step-num { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex-shrink: 0; background: rgba(99,102,241,.15); color: #a5b4fc; }
+    .step-num.done { background: rgba(34,197,94,.12); color: #4ade80; }
+    .step-line { width: 1px; background: var(--border); margin: 6px auto; flex-grow: 1; min-height: 24px; }
+    .nav-link { color: var(--sub); font-size: 13px; text-decoration: none; transition: color .15s; }
+    .nav-link:hover { color: var(--text); }
+    .nav-link.active { color: var(--text); }
+    .badge-green { background: rgba(34,197,94,.12); color: #4ade80; border-radius: 20px; padding: 2px 10px; font-size: 11px; font-weight: 600; }
   </style>
 </head>
-<body class="min-h-screen text-white font-sans">
-  <header class="border-b border-zinc-800 px-6 py-4 flex items-center justify-between">
+<body class="min-h-screen">
+
+  <header class="border-b px-6 py-4 flex items-center justify-between sticky top-0 z-30" style="background:var(--bg);border-color:var(--border)">
     <div class="flex items-center gap-6">
       <a href="/" class="flex items-center gap-2">
-        <div class="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center font-bold text-xs">C</div>
-        <span class="font-bold tracking-tight">ClawMarketer</span>
+        <div class="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs" style="background:var(--indigo)">C</div>
+        <span class="font-bold text-sm tracking-tight">ClawMarketer</span>
       </a>
       <nav class="hidden md:flex items-center gap-5">
         <a href="/" class="nav-link">Dashboard</a>
-        <a href="/onboarding" class="nav-link text-white">Setup Guide</a>
+        <a href="/onboarding" class="nav-link active">Setup</a>
         <a href="/prompts" class="nav-link">Prompt Guide</a>
       </nav>
     </div>
   </header>
 
-  <main class="max-w-3xl mx-auto px-6 py-10">
+  <main class="max-w-2xl mx-auto px-6 py-10">
 
     <div class="mb-10">
-      <h1 class="text-2xl font-bold mb-2">Setup Guide</h1>
-      <p class="text-zinc-400">Get ClawMarketer running on your machine in under 10 minutes.</p>
+      <h1 class="text-2xl font-bold mb-2">Get started in 3 steps</h1>
+      <p class="text-sm" style="color:var(--sub)">OpenClaw runs on your machine. ClawMarketer shows you the results. Telegram is how you talk to the agent.</p>
     </div>
 
-    <!-- Prerequisites -->
-    <div class="card rounded-2xl p-6 mb-6">
-      <h2 class="font-semibold mb-4">Prerequisites</h2>
-      <div class="space-y-2 text-sm text-zinc-400">
-        <div class="flex items-center gap-3"><span class="tag">Required</span> Python 3.9+</div>
-        <div class="flex items-center gap-3"><span class="tag">Required</span> <a href="https://console.groq.com" class="text-indigo-400 underline" target="_blank">Groq API key</a> (free)</div>
-        <div class="flex items-center gap-3"><span class="tag">Optional</span> Meta Ads account (for live data)</div>
-        <div class="flex items-center gap-3"><span class="tag">Optional</span> Firebase project (for auth + history)</div>
+    <!-- Step 1 -->
+    <div class="flex gap-5 mb-2">
+      <div class="flex flex-col items-center" style="min-height:100%">
+        <div class="step-num">1</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="flex-1 pb-8">
+        <h2 class="font-semibold text-base mb-1">Install OpenClaw</h2>
+        <p class="text-sm mb-4" style="color:var(--sub)">OpenClaw is the agent engine that runs on your laptop. It connects to Telegram so you can trigger agents from your phone.</p>
+        <div class="code-block mb-3">git clone https://github.com/openclaw/openclaw.git
+cd openclaw
+npm install
+<button class="copy-btn" onclick="copyBlock(this)">copy</button></div>
+        <p class="text-xs" style="color:var(--sub2)">Requires Node.js 18+. Runs locally — agents only work while your laptop is on.</p>
       </div>
     </div>
 
-    <!-- Steps -->
-    <div class="space-y-5">
+    <!-- Step 2 -->
+    <div class="flex gap-5 mb-2">
+      <div class="flex flex-col items-center">
+        <div class="step-num" id="step2-num">2</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="flex-1 pb-8">
+        <h2 class="font-semibold text-base mb-1">Connect your Meta Ads account</h2>
+        <p class="text-sm mb-4" style="color:var(--sub)">Sign in to ClawMarketer and connect Meta Ads. This generates your pre-filled config file.</p>
 
-      <!-- Step 1 -->
-      <div class="card rounded-2xl p-6">
-        <div class="flex items-start gap-4">
-          <div class="step-num">1</div>
-          <div class="flex-1">
-            <h3 class="font-semibold mb-1">Clone the repository</h3>
-            <p class="text-zinc-500 text-sm mb-3">Get the code on your machine.</p>
-            <div class="code-block">
-              git clone https://github.com/muhammadegaa/clawmarketer.git<br>
-              cd clawmarketer
-              <button class="copy-btn" onclick="copy(this, 'git clone https://github.com/muhammadegaa/clawmarketer.git\ncd clawmarketer')">copy</button>
+        <div class="card p-5 mb-4" id="meta-status-check">
+          <div id="not-signed-in">
+            <p class="text-sm mb-3" style="color:var(--sub)">Sign in first to connect Meta Ads.</p>
+            <a href="/" class="btn btn-primary text-sm">Go to dashboard →</a>
+          </div>
+          <div id="signed-in-no-meta" class="hidden">
+            <p class="text-sm mb-3" style="color:var(--sub)">You're signed in but Meta Ads is not connected yet.</p>
+            <a href="/" class="btn btn-primary text-sm">Connect Meta Ads →</a>
+          </div>
+          <div id="signed-in-with-meta" class="hidden">
+            <div class="flex items-center gap-2 mb-4">
+              <div class="w-2 h-2 rounded-full" style="background:var(--green)"></div>
+              <span class="text-sm font-medium" style="color:var(--green)">Meta Ads connected</span>
             </div>
+            <p class="text-sm mb-4" style="color:var(--sub)">Download your pre-configured config file. It contains your Meta token, Telegram credentials, and ClawMarketer endpoint.</p>
+            <button id="download-btn" class="btn btn-primary text-sm" onclick="downloadConfig()">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Download clawmarketer.env
+            </button>
+            <p class="text-xs mt-2" style="color:var(--sub2)">Drop this file in your <code class="px-1 rounded" style="background:var(--border);color:var(--text)">openclaw/</code> directory.</p>
           </div>
         </div>
-      </div>
 
-      <!-- Step 2 -->
-      <div class="card rounded-2xl p-6">
-        <div class="flex items-start gap-4">
-          <div class="step-num">2</div>
-          <div class="flex-1">
-            <h3 class="font-semibold mb-1">Install dependencies</h3>
-            <p class="text-zinc-500 text-sm mb-3">Uses Python standard library + a few packages.</p>
-            <div class="code-block">
-              pip install -r requirements.txt
-              <button class="copy-btn" onclick="copy(this, 'pip install -r requirements.txt')">copy</button>
-            </div>
-          </div>
+        <div class="card-sm p-4">
+          <p class="text-xs font-medium mb-1" style="color:var(--sub)">Still need to add your Ad Account ID</p>
+          <p class="text-xs mb-2" style="color:var(--sub2)">After downloading, open <code class="px-1 rounded" style="background:var(--border);color:var(--text)">clawmarketer.env</code> and fill in:</p>
+          <div class="code-block" style="font-size:12px">META_AD_ACCOUNT_ID=act_<span style="color:var(--sub)">your_account_id</span><button class="copy-btn" onclick="copyBlock(this)">copy</button></div>
+          <p class="text-xs mt-2" style="color:var(--sub2)">Find it in Meta Ads Manager → the number in the URL after <code>act_</code></p>
         </div>
       </div>
+    </div>
 
-      <!-- Step 3 -->
-      <div class="card rounded-2xl p-6">
-        <div class="flex items-start gap-4">
-          <div class="step-num">3</div>
-          <div class="flex-1">
-            <h3 class="font-semibold mb-1">Configure environment</h3>
-            <p class="text-zinc-500 text-sm mb-3">Copy the example and fill in your keys.</p>
-            <div class="code-block mb-3">
-              cp .env.example .env
-              <button class="copy-btn" onclick="copy(this, 'cp .env.example .env')">copy</button>
-            </div>
-            <p class="text-zinc-500 text-sm mb-2">Edit <code class="text-indigo-400">.env</code> with your values:</p>
-            <div class="code-block">
-              <span class="text-zinc-500"># Required</span><br>
-              GROQ_API_KEY=gsk_...<br><br>
-              <span class="text-zinc-500"># For Meta Ads live data</span><br>
-              META_APP_ID=...<br>
-              META_APP_SECRET=...<br>
-              REDIRECT_URI=http://localhost:8000/auth/callback<br><br>
-              <span class="text-zinc-500"># For Firebase auth + history</span><br>
-              FIREBASE_API_KEY=...<br>
-              FIREBASE_AUTH_DOMAIN=...firebaseapp.com<br>
-              FIREBASE_PROJECT_ID=...<br>
-              FIREBASE_APP_ID=...
-            </div>
-          </div>
-        </div>
+    <!-- Step 3 -->
+    <div class="flex gap-5">
+      <div class="flex flex-col items-center">
+        <div class="step-num">3</div>
       </div>
+      <div class="flex-1 pb-8">
+        <h2 class="font-semibold text-base mb-1">Set up Telegram + add ClawMarketer skill</h2>
+        <p class="text-sm mb-5" style="color:var(--sub)">OpenClaw uses a Telegram bot as its interface. Create one, drop in the skill.</p>
 
-      <!-- Step 4 -->
-      <div class="card rounded-2xl p-6">
-        <div class="flex items-start gap-4">
-          <div class="step-num">4</div>
-          <div class="flex-1">
-            <h3 class="font-semibold mb-1">Start the server</h3>
-            <div class="code-block">
-              python3 -m uvicorn server:app --reload --port 8000
-              <button class="copy-btn" onclick="copy(this, 'python3 -m uvicorn server:app --reload --port 8000')">copy</button>
-            </div>
-            <p class="text-zinc-500 text-sm mt-3">Open <a href="http://localhost:8000" class="text-indigo-400 underline">http://localhost:8000</a></p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Step 5: Firebase (optional) -->
-      <div class="card rounded-2xl p-6">
-        <div class="flex items-start gap-4">
-          <div class="step-num">5</div>
-          <div class="flex-1">
-            <div class="flex items-center gap-2 mb-1">
-              <h3 class="font-semibold">Set up Firebase</h3>
-              <span class="tag">Optional</span>
-            </div>
-            <p class="text-zinc-500 text-sm mb-4">Enables login and saves your report history.</p>
-            <ol class="text-sm text-zinc-400 space-y-2 list-decimal list-inside">
-              <li>Go to <a href="https://console.firebase.google.com" class="text-indigo-400 underline" target="_blank">console.firebase.google.com</a> → Create project</li>
-              <li>Authentication → Get started → Enable <strong class="text-white">Google</strong> sign-in</li>
-              <li>Firestore Database → Create database → Start in <strong class="text-white">test mode</strong></li>
-              <li>Project Settings → Your apps → Add Web app → copy the config</li>
-              <li>Paste the values into your <code class="text-indigo-400">.env</code> file</li>
+        <div class="space-y-4">
+          <div class="card p-5">
+            <p class="text-sm font-semibold mb-3">Create your Telegram bot</p>
+            <ol class="text-sm space-y-2 list-decimal list-inside" style="color:var(--sub)">
+              <li>Open Telegram → search <strong class="text-white">@BotFather</strong></li>
+              <li>Send <code class="px-1.5 py-0.5 rounded" style="background:var(--border);color:#a5b4fc">/newbot</code> → follow prompts</li>
+              <li>Copy the bot token</li>
+              <li>Add to <code class="px-1 rounded" style="background:var(--border);color:var(--text)">clawmarketer.env</code>:
+                <code class="ml-1 px-1.5 py-0.5 rounded" style="background:var(--border);color:#a5b4fc">TELEGRAM_BOT_TOKEN=your_token</code>
+              </li>
             </ol>
           </div>
-        </div>
-      </div>
 
-      <!-- Step 6: Meta (optional) -->
-      <div class="card rounded-2xl p-6">
-        <div class="flex items-start gap-4">
-          <div class="step-num">6</div>
-          <div class="flex-1">
-            <div class="flex items-center gap-2 mb-1">
-              <h3 class="font-semibold">Connect Meta Ads</h3>
-              <span class="tag">Optional</span>
-            </div>
-            <p class="text-zinc-500 text-sm mb-4">Required for live campaign data. Skip to use CSV upload or sample data.</p>
-            <ol class="text-sm text-zinc-400 space-y-2 list-decimal list-inside">
-              <li>Register at <a href="https://developers.facebook.com" class="text-indigo-400 underline" target="_blank">developers.facebook.com</a> (use a different email if SMS fails)</li>
-              <li>Create App → type: <strong class="text-white">Business</strong> → add product: <strong class="text-white">Marketing API</strong></li>
-              <li>Settings → Basic → copy <strong class="text-white">App ID</strong> and <strong class="text-white">App Secret</strong></li>
-              <li>Add <code class="text-indigo-400">http://localhost:8000/auth/callback</code> to Valid OAuth Redirect URIs</li>
-              <li>Add values to <code class="text-indigo-400">.env</code> → restart server → click "Connect Meta Ads"</li>
-            </ol>
+          <div class="card p-5">
+            <p class="text-sm font-semibold mb-3">Add ClawMarketer skills to OpenClaw</p>
+            <div class="code-block mb-3"># In your openclaw/ directory
+cp path/to/openclaw_agent.py skills/
+cp path/to/openclaw_data_agent.py skills/
+cp clawmarketer.env .
+<button class="copy-btn" onclick="copyBlock(this)">copy</button></div>
+            <p class="text-xs mb-2" style="color:var(--sub)">Add both skills to your OpenClaw config:</p>
+            <div class="code-block" style="font-size:12px">{
+  "skills": [
+    {
+      "name": "meta_ads",
+      "trigger": ["analyze ads", "run ads report"],
+      "handler": "skills/openclaw_agent.handle"
+    },
+    {
+      "name": "data_cleanse",
+      "trigger": ["clean my data", "clean data", "analyze my files"],
+      "handler": "skills/openclaw_data_agent.handle"
+    }
+  ]
+}<button class="copy-btn" onclick="copyBlock(this)">copy</button></div>
+          </div>
+
+          <div class="card p-5">
+            <p class="text-sm font-semibold mb-3">Start OpenClaw</p>
+            <div class="code-block">npm start<button class="copy-btn" onclick="copyBlock(this)">copy</button></div>
           </div>
         </div>
+
+        <div class="mt-6 card p-5" style="border-color:rgba(99,102,241,.3)">
+          <p class="text-sm font-semibold mb-3">You're done. Try it:</p>
+          <div class="space-y-2">
+            <p class="text-xs" style="color:var(--sub)">Open Telegram → message your bot:</p>
+            <div class="code-block">"analyze ads last 30 days"<button class="copy-btn" onclick="copyBlock(this)">copy</button></div>
+            <div class="code-block">"clean my data"<button class="copy-btn" onclick="copyBlock(this)">copy</button></div>
+          </div>
+          <p class="text-xs mt-4" style="color:var(--sub)">Watch the progress tracker on your <a href="/" style="color:#a5b4fc" class="underline">ClawMarketer dashboard</a> update in real time.</p>
+        </div>
+
       </div>
-
-    </div>
-
-    <!-- Quick test -->
-    <div class="mt-8 card rounded-2xl p-6 border-indigo-900">
-      <h3 class="font-semibold mb-3">Quick test (no Meta account needed)</h3>
-      <div class="code-block">
-        python3 main.py demo --api-key YOUR_GROQ_KEY
-        <button class="copy-btn" onclick="copy(this, 'python3 main.py demo --api-key YOUR_GROQ_KEY')">copy</button>
-      </div>
-      <p class="text-zinc-500 text-sm mt-3">Or just go to <a href="/" class="text-indigo-400 underline">the dashboard</a> → Sample Data tab.</p>
-    </div>
-
-    <div class="mt-6 text-center">
-      <a href="/prompts" class="text-indigo-400 text-sm underline">Using Claude Code, Cursor, or another AI agent? →</a>
     </div>
 
   </main>
 
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+    import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+    const cfg = await fetch('/api/config').then(r => r.json());
+    if (!cfg.firebase?.apiKey) return;
+
+    const app  = initializeApp(cfg.firebase);
+    const auth = getAuth(app);
+
+    onAuthStateChanged(auth, async user => {
+      if (!user) {
+        document.getElementById('not-signed-in').classList.remove('hidden');
+        return;
+      }
+      window._uid = user.uid;
+      const meta = await fetch('/auth/status').then(r => r.json());
+      if (meta.connected) {
+        document.getElementById('signed-in-with-meta').classList.remove('hidden');
+        document.getElementById('step2-num').className = 'step-num done';
+        document.getElementById('step2-num').textContent = '✓';
+      } else {
+        document.getElementById('signed-in-no-meta').classList.remove('hidden');
+      }
+    });
+  </script>
+
   <script>
-    function copy(btn, text) {
-      navigator.clipboard.writeText(text);
+    function downloadConfig() {
+      const uid = window._uid;
+      if (!uid) return;
+      window.location.href = `/api/openclaw-config?uid=${uid}`;
+    }
+    function copyBlock(btn) {
+      const block = btn.closest('.code-block');
+      const clone = block.cloneNode(true);
+      clone.querySelectorAll('.copy-btn').forEach(b => b.remove());
+      navigator.clipboard.writeText(clone.innerText.trim());
       btn.textContent = 'copied!';
       setTimeout(() => btn.textContent = 'copy', 2000);
     }
