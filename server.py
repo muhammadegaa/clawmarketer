@@ -191,6 +191,19 @@ def auth_status(request: Request):
     return {"connected": True, "accounts": accounts}
 
 
+@app.get("/api/debug/meta")
+def debug_meta(request: Request):
+    """Temporary debug endpoint — remove before production."""
+    token = request.session.get("meta_token")
+    if not token:
+        return {"error": "no token in session"}
+    # Raw adaccounts response
+    r1 = http.get(META_ACCOUNTS_URL, params={"access_token": token, "fields": "id,name,account_status", "limit": 20})
+    # Also try /me to confirm token works
+    r2 = http.get("https://graph.facebook.com/v21.0/me", params={"access_token": token, "fields": "id,name"})
+    return {"adaccounts_raw": r1.json(), "me": r2.json(), "token_prefix": token[:20] + "..."}
+
+
 @app.post("/auth/disconnect")
 def disconnect(request: Request):
     request.session.pop("meta_token", None)
