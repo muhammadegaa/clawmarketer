@@ -7,3 +7,4 @@ requests==2.32.4
 itsdangerous==2.2.0
 starlette==0.46.2
 python-multipart==0.0.20
+openpyxl>=3.1.0

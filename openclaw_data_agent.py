@@ -38,16 +38,17 @@ from pathlib import Path
 from datetime import datetime
 from dotenv import load_dotenv
 
-load_dotenv(os.path.join(os.path.dirname(__file__), "..", "clawmarketer.env"))
+_repo_dir = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(_repo_dir, "clawmarketer.env"))
+
+# Ensure agents/ package is importable regardless of working directory
+if _repo_dir not in sys.path:
+    sys.path.insert(0, _repo_dir)
 
 CLAWMARKETER_URL     = os.getenv("CLAWMARKETER_URL", "https://clawmarketer.vercel.app")
 CLAWMARKETER_USER_ID = os.getenv("CLAWMARKETER_USER_ID", "")
 GROQ_API_KEY         = os.getenv("GROQ_API_KEY", "")
 DATA_DIR             = os.path.expanduser(os.getenv("DATA_DIR", "~/Documents/data"))
-
-_repo_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if _repo_dir not in sys.path:
-    sys.path.insert(0, _repo_dir)
 
 
 # ── Progress ──────────────────────────────────────────────────────────────────

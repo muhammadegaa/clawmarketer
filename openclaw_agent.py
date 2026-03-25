@@ -42,18 +42,18 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 # Load the ClawMarketer config file
-load_dotenv(os.path.join(os.path.dirname(__file__), "..", "clawmarketer.env"))
+_repo_dir = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(_repo_dir, "clawmarketer.env"))
+
+# Ensure agents/ package is importable regardless of working directory
+if _repo_dir not in sys.path:
+    sys.path.insert(0, _repo_dir)
 
 CLAWMARKETER_URL     = os.getenv("CLAWMARKETER_URL", "https://clawmarketer.vercel.app")
 CLAWMARKETER_USER_ID = os.getenv("CLAWMARKETER_USER_ID", "")
 META_ACCESS_TOKEN    = os.getenv("META_ACCESS_TOKEN", "")
 META_AD_ACCOUNT_ID   = os.getenv("META_AD_ACCOUNT_ID", "")
 GROQ_API_KEY         = os.getenv("GROQ_API_KEY", "")
-
-# Add clawmarketer repo to path so agents/ is importable
-_repo_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if _repo_dir not in sys.path:
-    sys.path.insert(0, _repo_dir)
 
 
 # ── Progress ──────────────────────────────────────────────────────────────────

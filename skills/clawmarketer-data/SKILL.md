@@ -14,7 +14,7 @@ user-invocable: true
 Run the data cleansing pipeline:
 
 ```bash
-cd /Users/muhammadegaa/Documents/Sides/clawmarketer
+cd ~/clawmarketer
 python openclaw_data_agent.py
 ```
 
@@ -26,7 +26,7 @@ The script will:
 5. Push live progress to the ClawMarketer dashboard
 
 ## Config
-All credentials and DATA_DIR are in `/Users/muhammadegaa/Documents/Sides/clawmarketer/clawmarketer.env`.
+All credentials and DATA_DIR are in `~/clawmarketer/clawmarketer.env`.
 
 If the user specifies a different folder, temporarily override:
 ```bash

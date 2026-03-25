@@ -14,7 +14,7 @@ user-invocable: true
 Run the Meta Ads analysis pipeline:
 
 ```bash
-cd /Users/muhammadegaa/Documents/Sides/clawmarketer
+cd ~/clawmarketer
 python openclaw_agent.py
 ```
 
@@ -39,7 +39,7 @@ If the user specifies a range, edit the `run()` call at the bottom of openclaw_a
 - "last quarter" → `date_preset=last_quarter`
 
 ## Config
-All credentials are in `/Users/muhammadegaa/Documents/Sides/clawmarketer/clawmarketer.env`.
+All credentials are in `~/clawmarketer/clawmarketer.env`.
 If the script fails with a missing token error, tell the user to fill in that file.
 
 ## Response format
