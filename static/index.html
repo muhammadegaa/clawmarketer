@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ClawMarketer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    body { background: #0f0f0f; }
+    .card { background: #1a1a1a; border: 1px solid #2a2a2a; }
+    .input-field { background: #111; border: 1px solid #333; color: #fff; border-radius: 8px; padding: 10px 14px; width: 100%; outline: none; transition: border 0.2s; }
+    .input-field:focus { border-color: #6366f1; }
+    select.input-field option { background: #1a1a1a; }
+    .btn { border-radius: 8px; padding: 11px 24px; font-weight: 600; cursor: pointer; transition: all 0.2s; border: none; font-size: 14px; }
+    .btn-primary { background: #6366f1; color: white; }
+    .btn-primary:hover { background: #4f46e5; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-google { background: #fff; color: #111; display: flex; align-items: center; gap-8px; gap: 8px; }
+    .btn-google:hover { background: #f3f4f6; }
+    .btn-meta { background: #1877F2; color: white; display: flex; align-items: center; gap: 8px; }
+    .btn-meta:hover { background: #166fe5; }
+    .btn-ghost { background: transparent; color: #9ca3af; border: 1px solid #2a2a2a; }
+    .btn-ghost:hover { border-color: #4b5563; color: #d1d5db; }
+    .btn-danger { background: transparent; color: #f87171; border: 1px solid #3f1515; font-size: 13px; padding: 7px 16px; }
+    .btn-danger:hover { background: #2d0a0a; }
+    .drop-zone { border: 2px dashed #2a2a2a; border-radius: 12px; padding: 36px 20px; text-align: center; cursor: pointer; transition: all 0.2s; }
+    .drop-zone:hover, .drop-zone.dragover { border-color: #6366f1; background: #1e1b4b18; }
+    .drop-zone.has-file { border-color: #4ade80; background: #052e1618; }
+    .metric-card { background: #111; border: 1px solid #2a2a2a; border-radius: 12px; padding: 20px; text-align: center; }
+    .badge-green { background: #052e16; color: #4ade80; border-radius: 6px; padding: 2px 10px; font-size: 12px; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .status-dot.green { background: #4ade80; box-shadow: 0 0 6px #4ade80; }
+    .stage-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; color: #4b5563; font-size: 14px; }
+    .stage-item.done { color: #4ade80; }
+    .stage-item.active { color: #fff; }
+    .tab-btn { padding: 8px 18px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; color: #6b7280; transition: all 0.2s; }
+    .tab-btn.active { background: #1e1b4b; color: #a5b4fc; }
+    .method-tab { padding: 9px 18px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; color: #6b7280; transition: all 0.2s; border: 1px solid transparent; }
+    .method-tab.active { background: #1a1a1a; border-color: #333; color: #e2e8f0; }
+    #report-content h2 { font-size: 1rem; color: #a5b4fc; font-weight: 600; margin: 16px 0 8px; }
+    #report-content p { color: #9ca3af; line-height: 1.7; margin-bottom: 10px; }
+    #report-content ul, #report-content ol { color: #9ca3af; padding-left: 20px; }
+    #report-content li { margin-bottom: 6px; }
+    #report-content strong { color: #e2e8f0; }
+    .history-item { border-bottom: 1px solid #2a2a2a; padding: 14px 0; cursor: pointer; transition: background 0.15s; }
+    .history-item:hover { background: #111; border-radius: 8px; padding: 14px 12px; margin: 0 -12px; }
+    .nav-link { color: #6b7280; font-size: 14px; cursor: pointer; transition: color 0.2s; text-decoration: none; }
+    .nav-link:hover { color: #d1d5db; }
+  </style>
+</head>
+<body class="min-h-screen text-white font-sans">
+
+  <!-- Auth Gate -->
+  <div id="auth-gate" class="min-h-screen flex items-center justify-center px-4">
+    <div class="w-full max-w-sm">
+      <div class="flex items-center justify-center gap-3 mb-8">
+        <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center font-bold">C</div>
+        <span class="font-bold text-xl tracking-tight">ClawMarketer</span>
+      </div>
+      <div class="card rounded-2xl p-8 text-center">
+        <h2 class="font-semibold text-lg mb-2">Sign in to continue</h2>
+        <p class="text-zinc-500 text-sm mb-7">Meta Ads AI Agent Platform</p>
+        <button class="btn btn-google w-full justify-center mb-3" onclick="signInWithGoogle()">
+          <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Continue with Google
+        </button>
+        <p class="text-xs text-zinc-600 mt-5">
+          New here? Check the <a href="/onboarding" class="text-indigo-400 underline">setup guide</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div id="app" class="hidden">
+
+    <!-- Header -->
+    <header class="border-b border-zinc-800 px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-6">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center font-bold text-xs">C</div>
+          <span class="font-bold tracking-tight">ClawMarketer</span>
+        </div>
+        <nav class="hidden md:flex items-center gap-5">
+          <a href="/" class="nav-link text-white">Dashboard</a>
+          <a href="/onboarding" class="nav-link">Setup Guide</a>
+          <a href="/prompts" class="nav-link">Prompt Guide</a>
+        </nav>
+      </div>
+      <div class="flex items-center gap-4">
+        <div id="header-meta-status" class="hidden items-center gap-2">
+          <span class="status-dot green"></span>
+          <span class="text-xs text-zinc-400">Meta connected</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <img id="user-avatar" src="" class="w-7 h-7 rounded-full hidden" />
+          <span id="user-name" class="text-sm text-zinc-400"></span>
+          <button class="btn btn-ghost text-xs px-3 py-2" onclick="signOut()">Sign out</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-6 py-8">
+
+      <!-- Dashboard: two columns -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Left: Run panel -->
+        <div class="lg:col-span-2">
+
+          <!-- Groq key -->
+          <div class="card rounded-2xl p-5 mb-5">
+            <label class="block text-xs text-zinc-500 mb-2 uppercase tracking-wider">Groq API Key</label>
+            <input id="groq-key" type="password" class="input-field text-sm" placeholder="gsk_..." />
+          </div>
+
+          <!-- Method tabs -->
+          <div class="flex gap-2 mb-4 bg-zinc-900 rounded-xl p-1 w-fit">
+            <button class="method-tab active" onclick="setMethod('meta',this)">Connect Meta Ads</button>
+            <button class="method-tab" onclick="setMethod('csv',this)">Upload CSV</button>
+            <button class="method-tab" onclick="setMethod('demo',this)">Sample Data</button>
+          </div>
+
+          <!-- Meta OAuth -->
+          <div id="method-meta" class="card rounded-2xl p-7">
+            <div id="meta-disconnected">
+              <p class="text-zinc-400 text-sm mb-5">Authorize ClawMarketer to read your Meta Ads data.</p>
+              <button class="btn btn-meta" onclick="connectMeta()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                Connect with Facebook
+              </button>
+            </div>
+            <div id="meta-connected" class="hidden">
+              <div class="flex items-center gap-2 mb-5">
+                <span class="status-dot green"></span>
+                <span class="text-green-400 text-sm font-medium">Connected</span>
+                <button class="btn btn-danger ml-auto" onclick="disconnect()">Disconnect</button>
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs text-zinc-500 mb-2">Ad Account</label>
+                  <select id="account-select" class="input-field text-sm"></select>
+                </div>
+                <div>
+                  <label class="block text-xs text-zinc-500 mb-2">Date Range</label>
+                  <select id="date-preset" class="input-field text-sm">
+                    <option value="last_7d">Last 7 days</option>
+                    <option value="last_14d">Last 14 days</option>
+                    <option value="last_30d" selected>Last 30 days</option>
+                    <option value="last_month">Last month</option>
+                    <option value="this_month">This month</option>
+                    <option value="last_quarter">Last quarter</option>
+                  </select>
+                </div>
+              </div>
+              <button class="btn btn-primary mt-5" onclick="runLive()">Run Agent</button>
+            </div>
+          </div>
+
+          <!-- CSV Upload -->
+          <div id="method-csv" class="card rounded-2xl p-7 hidden">
+            <div id="drop-zone" class="drop-zone" onclick="document.getElementById('file-input').click()"
+              ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+              <input id="file-input" type="file" accept=".csv" class="hidden" onchange="handleFileSelect(event)" />
+              <div id="drop-content">
+                <div class="text-3xl mb-3">📂</div>
+                <p class="text-zinc-300 font-medium mb-1">Drop your Meta Ads CSV</p>
+                <p class="text-zinc-500 text-sm">Campaigns → Export → CSV</p>
+              </div>
+              <div id="file-selected" class="hidden">
+                <div class="text-2xl mb-2">✅</div>
+                <p id="file-name" class="text-green-400 font-medium text-sm"></p>
+              </div>
+            </div>
+            <button id="upload-btn" class="btn btn-primary mt-5" onclick="runUpload()" disabled>Analyze</button>
+          </div>
+
+          <!-- Demo -->
+          <div id="method-demo" class="card rounded-2xl p-7 hidden text-center">
+            <div class="text-4xl mb-3">🧪</div>
+            <p class="text-zinc-300 font-medium mb-1">Sample Data Demo</p>
+            <p class="text-zinc-500 text-sm mb-5">5 campaigns, 3 weeks. No Meta account needed.</p>
+            <button class="btn btn-primary" onclick="runDemo()">Run Demo</button>
+          </div>
+        </div>
+
+        <!-- Right: History -->
+        <div class="lg:col-span-1">
+          <div class="card rounded-2xl p-5">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-semibold text-sm">Report History</h3>
+              <span id="history-count" class="text-xs text-zinc-600"></span>
+            </div>
+            <div id="history-list">
+              <p class="text-zinc-600 text-sm text-center py-6">No reports yet</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading -->
+      <div id="loading-panel" class="hidden mt-8">
+        <div class="card rounded-2xl p-12 text-center max-w-sm mx-auto">
+          <div class="text-4xl mb-5">⚙️</div>
+          <h2 class="font-semibold text-lg mb-6">Agent running...</h2>
+          <div class="text-left">
+            <div class="stage-item" id="s1"><span class="w-5 shrink-0">○</span><span>Fetching data</span></div>
+            <div class="stage-item" id="s2"><span class="w-5 shrink-0">○</span><span>Cleaning</span></div>
+            <div class="stage-item" id="s3"><span class="w-5 shrink-0">○</span><span>Analyzing</span></div>
+            <div class="stage-item" id="s4"><span class="w-5 shrink-0">○</span><span>Generating AI report</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div id="results-panel" class="hidden mt-8">
+        <div class="flex items-center justify-between mb-5">
+          <div>
+            <h2 class="text-xl font-bold">Campaign Report</h2>
+            <p id="date-label" class="text-sm text-zinc-500 mt-1"></p>
+          </div>
+          <div class="flex items-center gap-3">
+            <span id="clean-badge" class="text-xs text-zinc-500"></span>
+            <button class="btn btn-ghost text-sm px-4 py-2" onclick="backToSetup()">← New Report</button>
+          </div>
+        </div>
+
+        <div id="metrics-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"></div>
+
+        <div class="flex gap-2 mb-5">
+          <button class="tab-btn active" onclick="showTab('campaigns',this)">Campaigns</button>
+          <button class="tab-btn" onclick="showTab('report',this)">AI Report</button>
+          <button class="tab-btn" onclick="showTab('anomalies',this)">Anomalies</button>
+        </div>
+
+        <div id="tab-campaigns">
+          <div class="card rounded-2xl overflow-hidden">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b border-zinc-800 text-zinc-400 text-left">
+                  <th class="px-5 py-4 font-medium">Campaign</th>
+                  <th class="px-4 py-4 font-medium text-right">Spend</th>
+                  <th class="px-4 py-4 font-medium text-right">Impressions</th>
+                  <th class="px-4 py-4 font-medium text-right">Clicks</th>
+                  <th class="px-4 py-4 font-medium text-right">CTR</th>
+                  <th class="px-4 py-4 font-medium text-right">CPC</th>
+                  <th class="px-4 py-4 font-medium text-right">ROAS</th>
+                </tr>
+              </thead>
+              <tbody id="campaigns-table"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="tab-report" class="hidden">
+          <div class="card rounded-2xl p-8"><div id="report-content"></div></div>
+        </div>
+
+        <div id="tab-anomalies" class="hidden">
+          <div id="anomalies-content" class="card rounded-2xl p-6"></div>
+        </div>
+      </div>
+
+      <!-- Error -->
+      <div id="error-panel" class="hidden mt-8">
+        <div class="card rounded-2xl p-10 text-center max-w-sm mx-auto">
+          <div class="text-3xl mb-3">⚠️</div>
+          <p id="error-msg" class="text-red-400 text-sm mb-5"></p>
+          <button class="btn btn-ghost text-sm" onclick="backToSetup()">← Try again</button>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut as fbSignOut }
+      from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+    import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs, serverTimestamp }
+      from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+    let auth, db, currentUser;
+
+    // ── Bootstrap ──────────────────────────────────────────────────────────
+    const cfg = await fetch('/api/config').then(r => r.json());
+
+    if (cfg.firebase.apiKey) {
+      const fbApp = initializeApp(cfg.firebase);
+      auth = getAuth(fbApp);
+      db   = getFirestore(fbApp);
+
+      onAuthStateChanged(auth, user => {
+        if (user) {
+          currentUser = user;
+          showApp(user);
+          loadHistory();
+        } else {
+          currentUser = null;
+          document.getElementById('auth-gate').classList.remove('hidden');
+          document.getElementById('app').classList.add('hidden');
+        }
+      });
+    } else {
+      // No Firebase config — skip auth for local dev
+      showApp(null);
+    }
+
+    // ── Auth ───────────────────────────────────────────────────────────────
+    window.signInWithGoogle = async () => {
+      const provider = new GoogleAuthProvider();
+      try { await signInWithPopup(auth, provider); }
+      catch(e) { alert(e.message); }
+    };
+
+    window.signOut = async () => {
+      await fbSignOut(auth);
+    };
+
+    function showApp(user) {
+      document.getElementById('auth-gate').classList.add('hidden');
+      document.getElementById('app').classList.remove('hidden');
+      if (user) {
+        document.getElementById('user-name').textContent = user.displayName || user.email;
+        if (user.photoURL) {
+          const img = document.getElementById('user-avatar');
+          img.src = user.photoURL;
+          img.classList.remove('hidden');
+        }
+      }
+      checkMetaStatus();
+    }
+
+    // ── Save report to Firestore ───────────────────────────────────────────
+    async function saveReport(data) {
+      if (!db || !currentUser) return;
+      try {
+        await addDoc(collection(db, 'users', currentUser.uid, 'reports'), {
+          created_at: serverTimestamp(),
+          overall: data.overall,
+          anomalies: data.anomalies,
+          report_text: data.report,
+          clean_stats: data.clean_stats,
+        });
+        loadHistory();
+      } catch(e) { console.warn('Could not save report:', e.message); }
+    }
+
+    // ── Load report history ────────────────────────────────────────────────
+    async function loadHistory() {
+      if (!db || !currentUser) return;
+      try {
+        const q = query(
+          collection(db, 'users', currentUser.uid, 'reports'),
+          orderBy('created_at', 'desc'),
+          limit(10)
+        );
+        const snap = await getDocs(q);
+        const list = document.getElementById('history-list');
+        const count = document.getElementById('history-count');
+
+        if (snap.empty) {
+          list.innerHTML = '<p class="text-zinc-600 text-sm text-center py-6">No reports yet</p>';
+          return;
+        }
+
+        count.textContent = snap.size + ' reports';
+        list.innerHTML = snap.docs.map(doc => {
+          const d = doc.data();
+          const o = d.overall || {};
+          const date = d.created_at?.toDate?.()?.toLocaleDateString() || 'Recent';
+          return `<div class="history-item" onclick="loadStoredReport(${JSON.stringify(JSON.stringify(d))})">
+            <div class="flex justify-between items-start">
+              <span class="text-sm font-medium">${date}</span>
+              <span class="text-xs text-zinc-500">${o.num_campaigns || '?'} campaigns</span>
+            </div>
+            <div class="flex gap-3 mt-1 text-xs text-zinc-500">
+              <span>$${(o.total_spend||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0})}</span>
+              <span>${o.overall_ctr ? o.overall_ctr.toFixed(2)+'% CTR' : ''}</span>
+              <span>${o.avg_roas ? o.avg_roas.toFixed(2)+'x ROAS' : ''}</span>
+            </div>
+          </div>`;
+        }).join('');
+      } catch(e) { console.warn('Could not load history:', e.message); }
+    }
+
+    window.loadStoredReport = (jsonStr) => {
+      const d = JSON.parse(jsonStr);
+      renderResults({ overall: d.overall, campaigns: [], anomalies: d.anomalies, report: d.report_text, clean_stats: d.clean_stats });
+    };
+
+    // Expose save for use outside module
+    window._saveReport = saveReport;
+  </script>
+
+  <script>
+    let selectedFile = null;
+
+    // ── Meta ───────────────────────────────────────────────────────────────
+    async function checkMetaStatus() {
+      const res = await fetch('/auth/status');
+      const data = await res.json();
+      if (data.connected) showMetaConnected(data.accounts);
+
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('connected')) {
+        history.replaceState({}, '', '/');
+        setMethod('meta', document.querySelector('.method-tab'));
+      }
+    }
+
+    function connectMeta() { window.location.href = '/auth/meta'; }
+
+    async function disconnect() {
+      await fetch('/auth/disconnect', { method: 'POST' });
+      document.getElementById('meta-connected').classList.add('hidden');
+      document.getElementById('meta-disconnected').classList.remove('hidden');
+      document.getElementById('header-meta-status').classList.add('hidden');
+      document.getElementById('header-meta-status').classList.remove('flex');
+    }
+
+    function showMetaConnected(accounts) {
+      document.getElementById('meta-disconnected').classList.add('hidden');
+      document.getElementById('meta-connected').classList.remove('hidden');
+      document.getElementById('header-meta-status').classList.remove('hidden');
+      document.getElementById('header-meta-status').classList.add('flex');
+      const sel = document.getElementById('account-select');
+      sel.innerHTML = accounts.map(a =>
+        `<option value="${a.id}">${a.name} (${a.id})</option>`).join('');
+    }
+
+    // ── Methods ────────────────────────────────────────────────────────────
+    function setMethod(name, btn) {
+      ['meta','csv','demo'].forEach(m => document.getElementById('method-'+m).classList.add('hidden'));
+      document.querySelectorAll('.method-tab').forEach(b => b.classList.remove('active'));
+      document.getElementById('method-'+name).classList.remove('hidden');
+      btn.classList.add('active');
+    }
+
+    // ── File ───────────────────────────────────────────────────────────────
+    function handleDragOver(e) { e.preventDefault(); document.getElementById('drop-zone').classList.add('dragover'); }
+    function handleDragLeave() { document.getElementById('drop-zone').classList.remove('dragover'); }
+    function handleDrop(e) {
+      e.preventDefault();
+      document.getElementById('drop-zone').classList.remove('dragover');
+      const f = e.dataTransfer.files[0];
+      if (f?.name.endsWith('.csv')) setFile(f); else alert('Please drop a CSV file.');
+    }
+    function handleFileSelect(e) { setFile(e.target.files[0]); }
+    function setFile(f) {
+      selectedFile = f;
+      document.getElementById('drop-content').classList.add('hidden');
+      document.getElementById('file-selected').classList.remove('hidden');
+      document.getElementById('file-name').textContent = f.name;
+      document.getElementById('drop-zone').classList.add('has-file');
+      document.getElementById('upload-btn').disabled = false;
+    }
+
+    // ── UI ─────────────────────────────────────────────────────────────────
+    function fmt(n, type) {
+      if (n == null) return '—';
+      if (type === 'currency') return '$' + n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+      if (type === 'pct') return n.toFixed(2)+'%';
+      if (type === 'roas') return n.toFixed(2)+'x';
+      if (type === 'int') return n.toLocaleString();
+      return n;
+    }
+    function showTab(name, btn) {
+      ['campaigns','report','anomalies'].forEach(t => document.getElementById('tab-'+t).classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('tab-'+name).classList.remove('hidden');
+      btn.classList.add('active');
+    }
+    function setStage(n) {
+      for (let i=1;i<=4;i++) {
+        const el=document.getElementById('s'+i); el.classList.remove('done','active');
+        const ic=el.querySelector('span');
+        if(i<n){el.classList.add('done');ic.textContent='✓';}
+        else if(i===n){el.classList.add('active');ic.textContent='›';}
+        else ic.textContent='○';
+      }
+    }
+    function showPanel(id) {
+      ['loading-panel','results-panel','error-panel'].forEach(p =>
+        document.getElementById(p).classList.add('hidden'));
+      if (id) document.getElementById(id).classList.remove('hidden');
+    }
+    function backToSetup() { showPanel(null); }
+
+    function renderResults(data) {
+      const o = data.overall || {};
+      document.getElementById('metrics-grid').innerHTML = [
+        {label:'Total Spend',  value:fmt(o.total_spend,'currency'),  sub:(o.num_campaigns||'?')+' campaigns'},
+        {label:'Impressions',  value:fmt(o.total_impressions,'int'), sub:fmt(o.total_reach,'int')+' reach'},
+        {label:'CTR',          value:fmt(o.overall_ctr,'pct'),       sub:fmt(o.overall_cpc,'currency')+' CPC'},
+        {label:'ROAS',         value:fmt(o.avg_roas,'roas'),         sub:fmt(o.overall_cost_per_conversion,'currency')+' / conv.'},
+      ].map(m=>`<div class="metric-card"><div class="text-zinc-500 text-xs mb-2">${m.label}</div>
+        <div class="text-2xl font-bold mb-1">${m.value}</div>
+        <div class="text-zinc-600 text-xs">${m.sub}</div></div>`).join('');
+
+      if (o.date_range_start)
+        document.getElementById('date-label').textContent = o.date_range_start+' → '+o.date_range_end;
+
+      const cs = data.clean_stats||{};
+      document.getElementById('clean-badge').textContent =
+        (cs.clean_rows||0)+' rows'+(cs.dropped_rows>0?` (${cs.dropped_rows} cleaned)`:'');
+
+      document.getElementById('campaigns-table').innerHTML = (data.campaigns||[]).map(c=>`
+        <tr class="border-b border-zinc-800 hover:bg-zinc-900 transition-colors">
+          <td class="px-5 py-4 font-medium max-w-xs truncate" title="${c.name}">${c.name}</td>
+          <td class="px-4 py-4 text-right">${fmt(c.spend,'currency')}</td>
+          <td class="px-4 py-4 text-right text-zinc-400">${fmt(c.impressions,'int')}</td>
+          <td class="px-4 py-4 text-right text-zinc-400">${fmt(c.clicks,'int')}</td>
+          <td class="px-4 py-4 text-right">${fmt(c.ctr,'pct')}</td>
+          <td class="px-4 py-4 text-right">${fmt(c.cpc,'currency')}</td>
+          <td class="px-4 py-4 text-right">${c.roas?'<span class="badge-green">'+fmt(c.roas,'roas')+'</span>':'—'}</td>
+        </tr>`).join('');
+
+      document.getElementById('report-content').innerHTML = marked.parse(data.report||'No report generated.');
+      const anomDiv = document.getElementById('anomalies-content');
+      anomDiv.innerHTML = (!data.anomalies||!data.anomalies.length)
+        ? '<p class="text-green-400 text-sm">No anomalies detected.</p>'
+        : data.anomalies.map(a=>`<div class="flex items-start gap-3 py-3 border-b border-zinc-800 last:border-0">
+            <span class="text-yellow-400 shrink-0 mt-0.5">⚠</span>
+            <span class="text-sm text-zinc-300">${a}</span></div>`).join('');
+
+      showPanel('results-panel');
+    }
+
+    function startLoading() {
+      showPanel('loading-panel');
+      setStage(1);
+      setTimeout(()=>setStage(2),700);
+      setTimeout(()=>setStage(3),1500);
+      setTimeout(()=>setStage(4),2600);
+    }
+    function handleError(e) {
+      document.getElementById('error-msg').textContent = e.message||String(e);
+      showPanel('error-panel');
+    }
+
+    // ── Run functions ──────────────────────────────────────────────────────
+    async function runLive() {
+      const groq=document.getElementById('groq-key').value.trim();
+      const account=document.getElementById('account-select').value;
+      const preset=document.getElementById('date-preset').value;
+      if (!groq){alert('Enter your Groq API key.');return;}
+      startLoading();
+      const form=new FormData();
+      form.append('account_id',account);
+      form.append('groq_api_key',groq);
+      form.append('date_preset',preset);
+      try {
+        const res=await fetch('/api/run',{method:'POST',body:form});
+        const data=await res.json();
+        if(!res.ok) throw new Error(data.detail||'Unknown error');
+        renderResults(data);
+        window._saveReport?.(data);
+      } catch(e){handleError(e);}
+    }
+
+    async function runUpload() {
+      const groq=document.getElementById('groq-key').value.trim();
+      if(!groq){alert('Enter your Groq API key first.');return;}
+      if(!selectedFile){alert('Select a CSV file first.');return;}
+      startLoading();
+      const form=new FormData();
+      form.append('file',selectedFile);
+      form.append('groq_api_key',groq);
+      try {
+        const res=await fetch('/api/upload',{method:'POST',body:form});
+        const data=await res.json();
+        if(!res.ok) throw new Error(data.detail||'Unknown error');
+        renderResults(data);
+        window._saveReport?.(data);
+      } catch(e){handleError(e);}
+    }
+
+    async function runDemo() {
+      const groq=document.getElementById('groq-key').value.trim();
+      if(!groq){alert('Enter your Groq API key first.');return;}
+      startLoading();
+      try {
+        const res=await fetch('/api/demo?groq_api_key='+encodeURIComponent(groq),{method:'POST'});
+        const data=await res.json();
+        if(!res.ok) throw new Error(data.detail||'Unknown error');
+        renderResults(data);
+        window._saveReport?.(data);
+      } catch(e){handleError(e);}
+    }
+  </script>
+</body>
+</html>

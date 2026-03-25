@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prompt Guide — ClawMarketer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: #0f0f0f; }
+    .card { background: #1a1a1a; border: 1px solid #2a2a2a; }
+    .code-block { background: #0a0a0a; border: 1px solid #2a2a2a; border-radius: 8px; padding: 16px; font-family: 'Monaco', monospace; font-size: 12.5px; color: #e2e8f0; white-space: pre-wrap; overflow-x: auto; position: relative; line-height: 1.7; }
+    .copy-btn { position: absolute; top: 10px; right: 10px; background: #1a1a1a; border: 1px solid #333; border-radius: 6px; padding: 4px 12px; font-size: 11px; color: #9ca3af; cursor: pointer; font-family: sans-serif; }
+    .copy-btn:hover { color: #fff; border-color: #555; }
+    .tool-badge { display: inline-flex; align-items: center; gap: 6px; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; padding: 5px 12px; font-size: 12px; color: #9ca3af; }
+    .nav-link { color: #6b7280; font-size: 14px; cursor: pointer; transition: color 0.2s; text-decoration: none; }
+    .nav-link:hover { color: #d1d5db; }
+    .section-tab { padding: 8px 18px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; color: #6b7280; transition: all 0.2s; border: 1px solid transparent; }
+    .section-tab.active { background: #1e1b4b; color: #a5b4fc; border-color: #312e81; }
+    .highlight { color: #a5b4fc; }
+    .comment { color: #4b5563; }
+  </style>
+</head>
+<body class="min-h-screen text-white font-sans">
+  <header class="border-b border-zinc-800 px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-6">
+      <a href="/" class="flex items-center gap-2">
+        <div class="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center font-bold text-xs">C</div>
+        <span class="font-bold tracking-tight">ClawMarketer</span>
+      </a>
+      <nav class="hidden md:flex items-center gap-5">
+        <a href="/" class="nav-link">Dashboard</a>
+        <a href="/onboarding" class="nav-link">Setup Guide</a>
+        <a href="/prompts" class="nav-link text-white">Prompt Guide</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="max-w-3xl mx-auto px-6 py-10">
+
+    <div class="mb-8">
+      <h1 class="text-2xl font-bold mb-2">Prompt Guide</h1>
+      <p class="text-zinc-400 text-sm">Ready-to-use prompts for setting up ClawMarketer with AI coding agents. Copy, paste, run.</p>
+    </div>
+
+    <!-- Tool badges -->
+    <div class="flex flex-wrap gap-2 mb-8">
+      <span class="tool-badge">🤖 Claude Code</span>
+      <span class="tool-badge">✦ Cursor</span>
+      <span class="tool-badge">💨 Windsurf</span>
+      <span class="tool-badge">🔮 GitHub Copilot</span>
+    </div>
+
+    <!-- Section tabs -->
+    <div class="flex gap-2 mb-7 flex-wrap">
+      <button class="section-tab active" onclick="showSection('setup', this)">Initial Setup</button>
+      <button class="section-tab" onclick="showSection('meta', this)">Meta Ads Connection</button>
+      <button class="section-tab" onclick="showSection('firebase', this)">Firebase</button>
+      <button class="section-tab" onclick="showSection('extend', this)">Extend the Agent</button>
+      <button class="section-tab" onclick="showSection('debug', this)">Debug</button>
+    </div>
+
+    <!-- Setup prompts -->
+    <div id="section-setup" class="space-y-5">
+      <div class="card rounded-2xl p-6">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-semibold text-sm">Full project setup from scratch</h3>
+        </div>
+        <p class="text-zinc-500 text-xs mb-3">Use this when starting fresh on a new machine.</p>
+        <div class="code-block">
+<button class="copy-btn" onclick="copy(this)">copy</button><span class="comment"># Paste into Claude Code, Cursor, or any AI coding agent</span>
+
+I want to set up ClawMarketer, an AI-powered Meta Ads analysis tool.
+
+Clone and set up this repo: https://github.com/muhammadegaa/clawmarketer
+
+Steps:
+1. Clone the repo
+2. Install dependencies: pip install -r requirements.txt
+3. Copy .env.example to .env
+4. I have a Groq API key: [PASTE YOUR KEY]
+5. Start the server: python3 -m uvicorn server:app --reload --port 8000
+6. Verify it works by opening http://localhost:8000
+
+Tell me when it's running and what I should do next.</div>
+      </div>
+
+      <div class="card rounded-2xl p-6">
+        <h3 class="font-semibold text-sm mb-3">Quick verification check</h3>
+        <p class="text-zinc-500 text-xs mb-3">Confirm everything is working after setup.</p>
+        <div class="code-block">
+<button class="copy-btn" onclick="copy(this)">copy</button>Check that ClawMarketer is set up correctly:
+
+1. Verify requirements.txt packages are all installed
+2. Confirm .env file exists and has GROQ_API_KEY set
+3. Run: python3 main.py demo --no-ai
+4. Tell me if there are any errors and fix them
+
+Expected output: a table showing 5 campaigns with spend, CTR, CPC, and ROAS.</div>
+      </div>
+    </div>
+
+    <!-- Meta prompts -->
+    <div id="section-meta" class="space-y-5 hidden">
+      <div class="card rounded-2xl p-6">
+        <h3 class="font-semibold text-sm mb-3">Connect Meta Ads OAuth</h3>
+        <p class="text-zinc-500 text-xs mb-3">Use after you have a Meta App ID and Secret.</p>
+        <div class="code-block">
+<button class="copy-btn" onclick="copy(this)">copy</button>I have a Meta developer app and want to connect it to ClawMarketer.
+
+My credentials:
+- META_APP_ID: [YOUR APP ID]
+- META_APP_SECRET: [YOUR APP SECRET]
+
+Add these to my .env file and make sure the OAuth redirect URI
+http://localhost:8000/auth/callback is configured.
+
+Then restart the server and tell me how to test the connection.</div>
+      </div>
+
+      <div class="card rounded-2xl p-6">
+        <h3 class="font-semibold text-sm mb-3">Fetch specific account + date range (CLI)</h3>
+        <div class="code-block">
+<button class="copy-btn" onclick="copy(this)">copy</button>Run the Meta Ads agent from the CLI for account [AD_ACCOUNT_ID]
+for the last 30 days and save the report.
+
+Use: python3 main.py fetch --account [AD_ACCOUNT_ID] --preset last_30d
+
+If it fails, show me the error and fix it.</div>
+      </div>
+    </div>
+
+    <!-- Firebase prompts -->
+    <div id="section-firebase" class="space-y-5 hidden">
+      <div class="card rounded-2xl p-6">
+        <h3 class="font-semibold text-sm mb-3">Add Firebase to the project</h3>
+        <div class="code-block">
+<button class="copy-btn" onclick="copy(this)">copy</button>I want to add Firebase auth and Firestore to ClawMarketer.
+
+I have a Firebase project. Here is my config:
+- FIREBASE_API_KEY: [YOUR KEY]
+- FIREBASE_AUTH_DOMAIN: [YOUR PROJECT].firebaseapp.com
+- FIREBASE_PROJECT_ID: [YOUR PROJECT ID]
+- FIREBASE_APP_ID: [YOUR APP ID]
+
+Add these to my .env file. The app already has a /api/config endpoint
+that exposes these to the frontend.
+
+Restart the server and confirm Google sign-in works at http://localhost:8000.</div>
+      </div>
+
+      <div class="card rounded-2xl p-6">
+        <h3 class="font-semibold text-sm mb-3">Set up Firestore security rules</h3>
+        <p class="text-zinc-500 text-xs mb-3">Run in Firebase Console → Firestore → Rules.</p>
+        <div class="code-block">
+<button class="copy-btn" onclick="copy(this)">copy</button>Write Firestore security rules for ClawMarketer where:
+- Users can only read/write their own data under users/{userId}/reports
+- No public access to any data
+- The collection structure is: users/{userId}/reports/{reportId}
+
+Give me the rules to paste into the Firebase Console.</div>
+      </div>
+    </div>
+
+    <!-- Extend prompts -->
+    <div id="section-extend" class="space-y-5 hidden">
+      <div class="card rounded-2xl p-6">
+        <h3 class="font-semibold text-sm mb-3">Add a new metric to the analysis</h3>
+        <div class="code-block">
+<button class="copy-btn" onclick="copy(this)">copy</button>Add "Frequency" as a metric to ClawMarketer's analyzer.
+
+Frequency = Impressions / Reach. High frequency (above 3.0) means
+users are seeing the same ad too many times — add this as an anomaly flag.
+
+Files to modify: agents/analyzer.py
+Show the anomaly as: "High frequency ({value}x) on campaign: {name}"</div>
+      </div>
+
+      <div class="card rounded-2xl p-6">
+        <h3 class="font-semibold text-sm mb-3">Add ad-set level breakdown</h3>
+        <div class="code-block">
+<button class="copy-btn" onclick="copy(this)">copy</button>Add an "Ad Sets" tab to the ClawMarketer results panel that shows
+ad-set level performance data.
+
+The Meta API fetch already supports level="adset" (see agents/fetcher.py).
+Add a new API endpoint /api/run-adsets and a fourth tab in the results panel
+showing the same table as campaigns but for ad sets.</div>
+      </div>
+
+      <div class="card rounded-2xl p-6">
+        <h3 class="font-semibold text-sm mb-3">Schedule daily reports</h3>
+        <div class="code-block">
+<button class="copy-btn" onclick="copy(this)">copy</button>Add daily scheduled report generation to ClawMarketer.
+
+Requirements:
+- Run the full pipeline (fetch → clean → analyze → report) every day at 8am
+- Use APScheduler (add to requirements.txt)
+- Fetch last_7d data from the account in .env META_AD_ACCOUNT_ID
+- Save the result to a reports/ folder as a markdown file
+- Print a log line when the job runs
+
+Add the scheduler to server.py startup.</div>
+      </div>
+    </div>
+
+    <!-- Debug prompts -->
+    <div id="section-debug" class="space-y-5 hidden">
+      <div class="card rounded-2xl p-6">
+        <h3 class="font-semibold text-sm mb-3">Debug Meta API errors</h3>
+        <div class="code-block">
+<button class="copy-btn" onclick="copy(this)">copy</button>ClawMarketer is throwing a Meta API error when I try to connect.
+
+Error: [PASTE ERROR HERE]
+
+Check agents/fetcher.py and server.py.
+Explain what's causing the error and fix it.
+The Meta app is in development mode.</div>
+      </div>
+
+      <div class="card rounded-2xl p-6">
+        <h3 class="font-semibold text-sm mb-3">Debug CSV column mapping</h3>
+        <div class="code-block">
+<button class="copy-btn" onclick="copy(this)">copy</button>My Meta Ads CSV export has columns that aren't being recognized by ClawMarketer.
+
+My CSV headers are:
+[PASTE YOUR COLUMN HEADERS HERE]
+
+Check agents/cleaner.py COLUMN_ALIASES dictionary and add the missing
+mappings so all my columns are correctly parsed.</div>
+      </div>
+
+      <div class="card rounded-2xl p-6">
+        <h3 class="font-semibold text-sm mb-3">Fix Firebase auth issues</h3>
+        <div class="code-block">
+<button class="copy-btn" onclick="copy(this)">copy</button>Firebase Google sign-in isn't working in ClawMarketer.
+
+Error in browser console: [PASTE ERROR]
+
+Check:
+1. Is /api/config returning the correct Firebase config?
+2. Is the auth domain correct in .env?
+3. Is localhost:8000 added to Firebase authorized domains?
+
+Fix the issue and tell me what was wrong.</div>
+      </div>
+    </div>
+
+    <div class="mt-8 text-center">
+      <a href="/onboarding" class="text-indigo-400 text-sm underline">← Back to setup guide</a>
+    </div>
+
+  </main>
+
+  <script>
+    function showSection(name, btn) {
+      ['setup','meta','firebase','extend','debug'].forEach(s =>
+        document.getElementById('section-'+s).classList.add('hidden'));
+      document.querySelectorAll('.section-tab').forEach(b => b.classList.remove('active'));
+      document.getElementById('section-'+name).classList.remove('hidden');
+      btn.classList.add('active');
+    }
+    function copy(btn) {
+      const block = btn.closest('.code-block');
+      const text = block.innerText.replace('copy\n','').replace('copied!\n','').trim();
+      navigator.clipboard.writeText(text);
+      btn.textContent = 'copied!';
+      setTimeout(() => btn.textContent = 'copy', 2000);
+    }
+  </script>
+</body>
+</html>
