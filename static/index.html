@@ -609,6 +609,54 @@
       <p style="color:var(--sub);font-size:14px;">Connect your data sources. Agents use these to fetch and analyze your marketing data.</p>
     </div>
     <div id="integrations-list"></div>
+
+    <!-- Telegram section -->
+    <p style="font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;margin-top:24px;">Notifications</p>
+    <div class="card" style="padding:20px;">
+      <div style="display:flex;align-items:flex-start;gap:14px;">
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(37,211,102,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </div>
+        <div style="flex:1;min-width:0;" id="telegram-card-body">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
+            <span style="font-size:14px;font-weight:600;">Telegram</span>
+          </div>
+          <p style="font-size:12px;color:var(--sub);margin:0;">Loading...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- API Token section -->
+    <p style="font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;margin-top:24px;">ClawMarketer API</p>
+    <div class="card" style="padding:20px;">
+      <div style="display:flex;align-items:flex-start;gap:14px;">
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(99,102,241,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><circle cx="12" cy="12" r="1"/></svg>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
+            <span style="font-size:14px;font-weight:600;">API Token</span>
+            <div style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);">
+              <div class="dot dot-green" style="width:6px;height:6px;"></div>
+              <span style="font-size:11px;color:#4ade80;font-weight:500;">Active</span>
+            </div>
+          </div>
+          <p style="font-size:12px;color:var(--sub);margin:0 0 14px;">Used by your local OpenClaw agents to pull credentials automatically — no need to paste tokens into config files.</p>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <input id="api-token-input" type="password" readonly
+              style="flex:1;min-width:0;font-size:12px;font-family:monospace;padding:8px 12px;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;color:var(--text);outline:none;"
+              value="Loading..." />
+            <button class="btn btn-ghost btn-sm" onclick="toggleApiTokenVisibility()" id="api-token-toggle">Show</button>
+            <button class="btn btn-ghost btn-sm" onclick="copyApiToken()">Copy</button>
+            <button class="btn btn-ghost btn-sm" onclick="regenerateApiToken()" style="color:#f87171;border-color:rgba(248,113,113,.3);">Rotate</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap;">
+            <button class="btn btn-primary btn-sm" onclick="downloadEnvFile()">Download clawmarketer.env</button>
+            <p style="font-size:11px;color:var(--sub);margin:0;">Save to <code style="background:var(--bg2);padding:1px 4px;border-radius:3px;">~/.openclaw/clawmarketer.env</code> on your machine.</p>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
 </div>
@@ -781,7 +829,7 @@ function switchTab(tab) {
   });
   document.getElementById(`tab-${tab}`).classList.remove('hidden');
   document.querySelector(`[data-tab="${tab}"]`)?.classList.add('active');
-  if (tab === 'integrations') renderIntegrations();
+  if (tab === 'integrations') { renderIntegrations(); loadApiToken(); loadTelegramStatus(); }
 }
 window.switchTab = switchTab;
 
@@ -819,8 +867,9 @@ async function initFirebase() {
 
 async function afterSignIn(user) {
   updateNavUser(user);
-  // Load Meta token from Firestore (cross-device sync)
+  // Load Meta token and Telegram status from Firestore
   await loadMetaTokenFromFirestore();
+  loadTelegramStatus();
   // If a token just arrived via OAuth redirect, persist it now that we have uid
   if (window._pendingMetaToken) {
     await saveMetaTokenToFirestore(window._pendingMetaToken, _accountId || '');
@@ -1070,6 +1119,8 @@ window.clearDemoData = async function() {
   try {
     const res = await fetch(`/api/demo?uid=${_uid}`, { method: 'DELETE' });
     const data = await res.json();
+    // Mark that user intentionally cleared demo — don't auto-seed again
+    if (_uid) localStorage.setItem(`cm_demo_cleared_${_uid}`, '1');
     toast(`Cleared ${data.deleted || 0} demo run(s)`, 'success');
   } catch(e) {
     toast('Failed to clear demo data', 'error');
@@ -1189,6 +1240,144 @@ window.disconnectMeta = async function() {
 };
 
 // ─────────────────────────────────────────────
+// Telegram Registration
+// ─────────────────────────────────────────────
+let _telegramConnected = false;
+let _telegramChatId    = '';
+let _tgPollTimer       = null;
+
+async function loadTelegramStatus() {
+  if (!_uid) return;
+  try {
+    const resp = await fetch(`/api/telegram/status?uid=${_uid}`);
+    const data = await resp.json();
+    _telegramConnected = data.connected || false;
+    _telegramChatId    = data.chat_id   || '';
+    _renderTelegramCard();
+  } catch(e) {}
+}
+
+function _renderTelegramCard() {
+  const el = document.getElementById('telegram-card-body');
+  if (!el) return;
+  if (_telegramConnected) {
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;flex-wrap:wrap;">
+        <span style="font-size:14px;font-weight:600;">Telegram</span>
+        <div style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);">
+          <div style="width:6px;height:6px;border-radius:50%;background:#4ade80;"></div>
+          <span style="font-size:11px;color:#4ade80;font-weight:500;">Connected</span>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--sub);margin:0;">Reports and alerts will be sent to your Telegram. Chat ID: <code style="background:var(--bg2);padding:1px 4px;border-radius:3px;">${_telegramChatId}</code></p>`;
+    if (_tgPollTimer) { clearInterval(_tgPollTimer); _tgPollTimer = null; }
+  } else {
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
+        <span style="font-size:14px;font-weight:600;">Telegram</span>
+      </div>
+      <p style="font-size:12px;color:var(--sub);margin:0 0 12px;">Connect Telegram so agents can send you reports, charts, and alerts directly.</p>
+      <div id="tg-connect-area">
+        <button class="btn btn-primary btn-sm" onclick="startTelegramConnect()">Connect Telegram</button>
+      </div>`;
+  }
+}
+
+window.startTelegramConnect = async function() {
+  if (!_uid) return;
+  const area = document.getElementById('tg-connect-area');
+  if (area) area.innerHTML = `<p style="font-size:12px;color:var(--sub);">Generating code...</p>`;
+  try {
+    const resp = await fetch(`/api/telegram/register?uid=${_uid}`, { method: 'POST' });
+    const data = await resp.json();
+    const code = data.code;
+    if (area) area.innerHTML = `
+      <p style="font-size:12px;color:var(--sub);margin-bottom:10px;">
+        Open <strong style="color:var(--text);">@ClawMarketerBot</strong> on Telegram and send:
+      </p>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 16px;font-family:monospace;font-size:18px;font-weight:700;letter-spacing:4px;color:var(--text);">/connect ${code}</div>
+        <button class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText('/connect ${code}').then(()=>toast('Copied','success'))">Copy</button>
+      </div>
+      <p style="font-size:11px;color:var(--sub);margin-top:8px;">Code expires in 10 minutes. Waiting for confirmation...</p>`;
+    // Poll for connection
+    if (_tgPollTimer) clearInterval(_tgPollTimer);
+    _tgPollTimer = setInterval(async () => {
+      await loadTelegramStatus();
+      if (_telegramConnected) {
+        clearInterval(_tgPollTimer);
+        _tgPollTimer = null;
+        toast('Telegram connected! ✅', 'success');
+      }
+    }, 3000);
+  } catch(e) {
+    if (area) area.innerHTML = `<p style="font-size:12px;color:#f87171;">Failed to generate code. Try again.</p>`;
+  }
+};
+
+// ─────────────────────────────────────────────
+// API Token
+// ─────────────────────────────────────────────
+let _apiToken = '';
+
+async function loadApiToken() {
+  if (!_uid) return;
+  try {
+    const resp = await fetch(`/api/auth/token?uid=${_uid}`);
+    const data = await resp.json();
+    _apiToken = data.token || '';
+    const input = document.getElementById('api-token-input');
+    if (input) input.value = _apiToken;
+  } catch(e) {
+    console.warn('loadApiToken failed', e);
+  }
+}
+
+window.toggleApiTokenVisibility = function() {
+  const input = document.getElementById('api-token-input');
+  const btn   = document.getElementById('api-token-toggle');
+  if (!input) return;
+  if (input.type === 'password') {
+    input.type = 'text'; if (btn) btn.textContent = 'Hide';
+  } else {
+    input.type = 'password'; if (btn) btn.textContent = 'Show';
+  }
+};
+
+window.copyApiToken = function() {
+  if (!_apiToken) return;
+  navigator.clipboard.writeText(_apiToken).then(() => toast('API token copied', 'success'));
+};
+
+window.regenerateApiToken = async function() {
+  if (!_uid) return;
+  if (!confirm('Rotate your API token? Your existing clawmarketer.env will stop working until you re-download it.')) return;
+  try {
+    const resp = await fetch(`/api/auth/token?uid=${_uid}`, { method: 'POST' });
+    const data = await resp.json();
+    _apiToken = data.token || '';
+    const input = document.getElementById('api-token-input');
+    if (input) { input.value = _apiToken; input.type = 'text'; }
+    const btn = document.getElementById('api-token-toggle');
+    if (btn) btn.textContent = 'Hide';
+    toast('API token rotated — re-download your clawmarketer.env', 'success');
+  } catch(e) {
+    toast('Failed to rotate token', 'error');
+  }
+};
+
+window.downloadEnvFile = function() {
+  if (!_uid) return;
+  const url = `/api/openclaw-config?uid=${encodeURIComponent(_uid)}`;
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'clawmarketer.env';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+};
+
+// ─────────────────────────────────────────────
 // Dashboard & Firestore
 // ─────────────────────────────────────────────
 function loadDashboard(user) {
@@ -1283,8 +1472,17 @@ function subscribeRuns() {
       orderBy('updated_at', 'desc'),
       limit(10)
     );
+    let _autoSeedDone = false;
     _runsUnsub = onSnapshot(q, snap => {
       const runs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Auto-seed demo data for brand-new accounts with no runs at all
+      // Skip if user already explicitly cleared demo data (localStorage flag)
+      const clearedDemo = localStorage.getItem(`cm_demo_cleared_${_uid}`);
+      if (runs.length === 0 && !_autoSeedDone && !clearedDemo && _uid) {
+        _autoSeedDone = true;
+        fetch(`/api/demo?uid=${_uid}`, { method: 'POST' }).catch(() => {});
+        return; // snapshot will fire again once demo runs are written
+      }
       renderLastRun(runs[0] || null);
       renderRunsTable(runs);
       renderAgentsGrid(runs);
