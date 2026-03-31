@@ -40,6 +40,56 @@ def _to_fs(value):
     return {"stringValue": str(value)}
 
 
+def _from_fs(field: dict):
+    """Deserialize a Firestore field value back to a Python value."""
+    if "nullValue"    in field: return None
+    if "booleanValue" in field: return field["booleanValue"]
+    if "integerValue" in field: return int(field["integerValue"])
+    if "doubleValue"  in field: return field["doubleValue"]
+    if "stringValue"  in field: return field["stringValue"]
+    if "arrayValue"   in field:
+        return [_from_fs(v) for v in field["arrayValue"].get("values", [])]
+    if "mapValue"     in field:
+        return {k: _from_fs(v) for k, v in field["mapValue"].get("fields", {}).items()}
+    return None
+
+
+def _read_from_firestore(user_id: str, collection: str, doc_id: str) -> Optional[dict]:
+    """Read a single Firestore document and return its fields as a Python dict."""
+    project_id = os.getenv("FIREBASE_PROJECT_ID", "")
+    api_key    = os.getenv("FIREBASE_API_KEY", "")
+    if not project_id:
+        return None
+    url = (f"https://firestore.googleapis.com/v1/projects/{project_id}"
+           f"/databases/(default)/documents/users/{user_id}/{collection}/{doc_id}")
+    try:
+        resp = http.get(url, params={"key": api_key})
+        if resp.status_code != 200:
+            return None
+        doc = resp.json()
+        return {k: _from_fs(v) for k, v in doc.get("fields", {}).items()}
+    except Exception as e:
+        print(f"[Firestore] _read_from_firestore failed: {e}")
+        return None
+
+
+def _write_to_firestore(user_id: str, collection: str, doc_id: str, data: dict):
+    """Write arbitrary fields to a Firestore document (merge/patch)."""
+    project_id = os.getenv("FIREBASE_PROJECT_ID", "")
+    api_key    = os.getenv("FIREBASE_API_KEY", "")
+    if not project_id:
+        return
+    fields = {k: _to_fs(v) for k, v in data.items()}
+    url = (f"https://firestore.googleapis.com/v1/projects/{project_id}"
+           f"/databases/(default)/documents/users/{user_id}/{collection}/{doc_id}")
+    try:
+        http.patch(url, json={"fields": fields},
+                   params={"key": api_key,
+                           "updateMask.fieldPaths": list(fields.keys())})
+    except Exception as e:
+        print(f"[Firestore] _write_to_firestore failed: {e}")
+
+
 def _push_to_firestore(user_id: str, run_id: str, skill: str, status: str,
                        triggered_by: str = "manual", result: dict = None,
                        stages: list = None, attachments: list = None,
@@ -336,10 +386,16 @@ def run_live(body: RunRequest):
         raise HTTPException(status_code=400, detail=f"Meta API error: {str(e)}")
 
     if df_raw.empty:
-        raise HTTPException(
-            status_code=404,
-            detail="No campaign data found for this date range. Your Meta Ads account may not have any active or historical campaigns yet. Try the Demo mode to see how the platform works."
-        )
+        # No campaigns yet — fall back to sample data so the dashboard is always useful
+        import pandas as _pd
+        from sample_data import generate as _gen_sample
+        csv_path = _gen_sample()
+        df_raw = _pd.read_csv(csv_path)
+        os.unlink(csv_path)
+        result = _run_pipeline(df_raw, os.getenv("GROQ_API_KEY", ""))
+        result["is_sample"] = True
+        result["sample_notice"] = "No campaigns found in your Meta Ads account yet. Showing sample data so you can explore the dashboard."
+        return result
 
     return _run_pipeline(df_raw, os.getenv("GROQ_API_KEY", ""))
 
@@ -525,33 +581,350 @@ def clear_demo(uid: str = ""):
     return {"deleted": deleted}
 
 
-# ── OpenClaw config download ───────────────────────────────────────────────────
+# ── Credentials API ───────────────────────────────────────────────────────────
 
-@app.get("/api/openclaw-config")
-def openclaw_config(uid: str, token: str = ""):
-    """Generate a pre-filled .env for the user's OpenClaw setup."""
+def _get_or_create_api_token(uid: str) -> str:
+    """Return the existing API token for uid, or generate + store a new one."""
+    doc = _read_from_firestore(uid, "meta", "profile") or {}
+    if doc.get("api_token"):
+        return doc["api_token"]
+    token = "sk_cm_" + secrets.token_hex(32)
+    _write_to_firestore(uid, "meta", "profile", {"api_token": token})
+    return token
+
+
+def _validate_bearer(request: Request) -> Optional[str]:
+    """Extract and return bearer token from Authorization header, or None."""
+    auth = request.headers.get("Authorization", "")
+    if auth.startswith("Bearer "):
+        return auth[7:].strip()
+    return None
+
+
+@app.get("/api/auth/token")
+def get_api_token(uid: str = "", request: Request = None):
+    """Return (or lazily create) the API token for this user.
+    Must pass Firebase ID token as Bearer — we trust the frontend to send it."""
+    if not uid:
+        raise HTTPException(status_code=400, detail="Missing uid")
+    token = _get_or_create_api_token(uid)
+    return {"token": token}
+
+
+@app.post("/api/auth/token")
+def regenerate_api_token(uid: str = ""):
+    """Regenerate (rotate) the API token for this user."""
+    if not uid:
+        raise HTTPException(status_code=400, detail="Missing uid")
+    token = "sk_cm_" + secrets.token_hex(32)
+    _write_to_firestore(uid, "meta", "profile", {"api_token": token})
+    return {"token": token}
+
+
+@app.get("/api/credentials")
+def get_credentials(uid: str = "", request: Request = None):
+    """Return all credentials for a user. Validated by CLAWMARKETER_API_TOKEN bearer."""
     if not uid:
         raise HTTPException(status_code=400, detail="Missing uid")
 
-    meta_token = token
+    bearer = _validate_bearer(request)
+    if not bearer:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+
+    # Look up the stored token for this uid
+    doc = _read_from_firestore(uid, "meta", "profile") or {}
+    stored_token = doc.get("api_token", "")
+    if not stored_token or bearer != stored_token:
+        raise HTTPException(status_code=403, detail="Invalid token")
+
+    # Fetch Meta integration from Firestore
+    meta_doc = _read_from_firestore(uid, "integrations", "meta") or {}
+    meta_creds = {}
+    if meta_doc.get("access_token"):
+        meta_creds = {
+            "access_token": meta_doc["access_token"],
+            "account_id":   meta_doc.get("account_id", ""),
+        }
+
+    return {
+        "meta":         meta_creds,
+        "groq_api_key": os.getenv("GROQ_API_KEY", ""),
+        "telegram": {
+            "bot_token": os.getenv("TELEGRAM_BOT_TOKEN", ""),
+            "chat_id":   "",   # user-specific, not server-level
+        },
+    }
+
+
+# ── Agent integration endpoints ───────────────────────────────────────────────
+
+class InsightsRequest(BaseModel):
+    uid: str
+    date_preset: str = "last_30d"
+
+@app.post("/api/integrations/meta/insights")
+def meta_insights(body: InsightsRequest, request: Request):
+    """Return Meta Ads campaign data for the agent.
+    Uses the user's stored Meta credentials from Firestore.
+    Falls back to sample data automatically if no Meta integration is set up."""
+    bearer = _validate_bearer(request)
+    if not bearer:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+
+    doc = _read_from_firestore(body.uid, "meta", "profile") or {}
+    if bearer != doc.get("api_token", ""):
+        raise HTTPException(status_code=403, detail="Invalid token")
+
+    # Try real Meta credentials stored in Firestore
+    meta_doc = _read_from_firestore(body.uid, "integrations", "meta") or {}
+    access_token = meta_doc.get("access_token", "")
+    account_id   = meta_doc.get("account_id", "")
+
+    connected_but_empty = False
+    if access_token:
+        try:
+            df = fetcher.fetch(access_token=access_token, ad_account_id=account_id,
+                               date_preset=body.date_preset)
+            if not df.empty:
+                return {
+                    "data_source": "meta_api",
+                    "rows": len(df),
+                    "data": df.to_dict(orient="records"),
+                }
+            connected_but_empty = True
+        except Exception as e:
+            print(f"[meta/insights] Meta API failed: {e}")
+
+    # Fallback: sample data (always show something useful)
+    from sample_data import generate as _gen
+    import pandas as pd
+    import math
+    csv_path = _gen()
+    df = pd.read_csv(csv_path)
+    os.unlink(csv_path)
+    # Replace NaN/inf with None so the response is JSON-serialisable
+    records = [
+        {k: (None if isinstance(v, float) and (math.isnan(v) or math.isinf(v)) else v)
+         for k, v in row.items()}
+        for row in df.to_dict(orient="records")
+    ]
+    return {
+        "data_source": "sample",
+        "rows": len(df),
+        "data": records,
+        "is_sample": True,
+        "sample_notice": (
+            "Your Meta Ads account is connected but has no campaign data yet. "
+            "Showing sample data so you can explore the platform."
+        ) if connected_but_empty else (
+            "No Meta Ads integration found. Showing sample data."
+        ),
+    }
+
+
+class ReportRequest(BaseModel):
+    uid: str
+    analysis: dict
+
+@app.post("/api/ai/report")
+def ai_report(body: ReportRequest, request: Request):
+    """Generate a structured Meta Ads AI report via the server's Groq key."""
+    bearer = _validate_bearer(request)
+    if not bearer:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+
+    doc = _read_from_firestore(body.uid, "meta", "profile") or {}
+    if bearer != doc.get("api_token", ""):
+        raise HTTPException(status_code=403, detail="Invalid token")
+
+    groq_key = os.getenv("GROQ_API_KEY", "")
+    if not groq_key:
+        return {"report": ""}
+
+    try:
+        report = reporter.generate(body.analysis, groq_key)
+        return {"report": report}
+    except Exception as e:
+        print(f"[ai/report] Groq failed: {e}")
+        return {"report": f"AI report unavailable: {e}"}
+
+
+class CompleteRequest(BaseModel):
+    uid: str
+    prompt: str
+    temperature: float = 0.4
+    max_tokens: int = 1024
+
+@app.post("/api/ai/complete")
+def ai_complete(body: CompleteRequest, request: Request):
+    """Generic LLM completion. Any skill can call this — agent never needs Groq key locally."""
+    bearer = _validate_bearer(request)
+    if not bearer:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+
+    doc = _read_from_firestore(body.uid, "meta", "profile") or {}
+    if bearer != doc.get("api_token", ""):
+        raise HTTPException(status_code=403, detail="Invalid token")
+
+    groq_key = os.getenv("GROQ_API_KEY", "")
+    if not groq_key:
+        return {"text": ""}
+
+    try:
+        from groq import Groq
+        client = Groq(api_key=groq_key)
+        resp = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": body.prompt}],
+            temperature=body.temperature,
+            max_tokens=body.max_tokens,
+        )
+        return {"text": resp.choices[0].message.content}
+    except Exception as e:
+        print(f"[ai/complete] Groq failed: {e}")
+        return {"text": f"AI unavailable: {e}"}
+
+
+# ── Telegram registration ─────────────────────────────────────────────────────
+
+import random as _random
+import string as _string
+from datetime import timezone as _tz
+
+def _write_telegram_code(code: str, uid: str, expires_at: str):
+    """Store a one-time Telegram connection code in a root-level Firestore collection."""
+    project_id = os.getenv("FIREBASE_PROJECT_ID", "")
+    api_key    = os.getenv("FIREBASE_API_KEY", "")
+    if not project_id:
+        return
+    url = (f"https://firestore.googleapis.com/v1/projects/{project_id}"
+           f"/databases/(default)/documents/telegram_codes/{code}")
+    fields = {
+        "uid":        _to_fs(uid),
+        "expires_at": _to_fs(expires_at),
+        "used":       _to_fs(False),
+    }
+    try:
+        http.patch(url, json={"fields": fields},
+                   params={"key": api_key,
+                           "updateMask.fieldPaths": list(fields.keys())})
+    except Exception as e:
+        print(f"[Firestore] write_telegram_code failed: {e}")
+
+
+def _read_telegram_code(code: str):
+    """Read a Telegram connection code document."""
+    project_id = os.getenv("FIREBASE_PROJECT_ID", "")
+    api_key    = os.getenv("FIREBASE_API_KEY", "")
+    if not project_id:
+        return None
+    url = (f"https://firestore.googleapis.com/v1/projects/{project_id}"
+           f"/databases/(default)/documents/telegram_codes/{code}")
+    try:
+        resp = http.get(url, params={"key": api_key})
+        if resp.status_code != 200:
+            return None
+        return {k: _from_fs(v) for k, v in resp.json().get("fields", {}).items()}
+    except Exception as e:
+        print(f"[Firestore] read_telegram_code failed: {e}")
+        return None
+
+
+@app.post("/api/telegram/register")
+def telegram_register(uid: str = ""):
+    """Generate a 6-digit one-time code the user pastes into the Telegram bot."""
+    if not uid:
+        raise HTTPException(status_code=400, detail="Missing uid")
+    from datetime import datetime, timezone, timedelta
+    code       = "".join(_random.choices(_string.digits, k=6))
+    expires_at = (datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat()
+    _write_telegram_code(code, uid, expires_at)
+    return {"code": code, "expires_in": 600}
+
+
+class TelegramVerifyBody(BaseModel):
+    code: str
+    chat_id: str
+
+@app.post("/api/telegram/verify")
+def telegram_verify(body: TelegramVerifyBody):
+    """Called by the bot when user sends /connect CODE.
+    Stores the chat_id against the uid and marks the code used."""
+    from datetime import datetime, timezone
+    rec = _read_telegram_code(body.code)
+    if not rec:
+        raise HTTPException(status_code=404, detail="Invalid code")
+    if rec.get("used"):
+        raise HTTPException(status_code=410, detail="Code already used")
+    # Check expiry
+    try:
+        exp = datetime.fromisoformat(rec["expires_at"])
+        if datetime.now(timezone.utc) > exp:
+            raise HTTPException(status_code=410, detail="Code expired")
+    except ValueError:
+        pass
+
+    uid = rec["uid"]
+    # Store chat_id in user profile
+    _write_to_firestore(uid, "meta", "profile", {"telegram_chat_id": body.chat_id})
+    # Mark code as used
+    _write_telegram_code(body.code, uid, rec.get("expires_at", ""))
+    project_id = os.getenv("FIREBASE_PROJECT_ID", "")
+    api_key    = os.getenv("FIREBASE_API_KEY", "")
+    if project_id:
+        url = (f"https://firestore.googleapis.com/v1/projects/{project_id}"
+               f"/databases/(default)/documents/telegram_codes/{body.code}")
+        http.patch(url, json={"fields": {"used": _to_fs(True)}},
+                   params={"key": api_key, "updateMask.fieldPaths": ["used"]})
+
+    return {"ok": True, "uid": uid}
+
+
+@app.get("/api/telegram/status")
+def telegram_status(uid: str = ""):
+    """Return Telegram connection status for a user."""
+    if not uid:
+        raise HTTPException(status_code=400, detail="Missing uid")
+    doc = _read_from_firestore(uid, "meta", "profile") or {}
+    chat_id = doc.get("telegram_chat_id", "")
+    return {"connected": bool(chat_id), "chat_id": chat_id}
+
+
+# ── OpenClaw config download ───────────────────────────────────────────────────
+
+@app.get("/api/openclaw-config")
+def openclaw_config(uid: str, request: Request = None):
+    """Generate a pre-filled .env for the user's OpenClaw setup.
+    Only emits CLAWMARKETER_URL, CLAWMARKETER_USER_ID, CLAWMARKETER_API_TOKEN, DATA_DIR.
+    Skills fetch Meta/Groq credentials at runtime via /api/credentials."""
+    if not uid:
+        raise HTTPException(status_code=400, detail="Missing uid")
+
+    api_token = _get_or_create_api_token(uid)
 
     deployed_url = os.getenv("VERCEL_URL", "https://clawmarketer.vercel.app")
     if deployed_url and not deployed_url.startswith("http"):
         deployed_url = f"https://{deployed_url}"
 
+    # Include Telegram chat_id if connected
+    profile      = _read_from_firestore(uid, "meta", "profile") or {}
+    chat_id      = profile.get("telegram_chat_id", "")
+    bot_token    = os.getenv("TELEGRAM_BOT_TOKEN", "")
+
     lines = [
         "# ClawMarketer — OpenClaw Agent Config",
         "# Generated from clawmarketer.vercel.app",
+        "# Skills fetch all credentials automatically — no Meta/Groq keys needed here.",
         "",
         f"CLAWMARKETER_URL={deployed_url}",
         f"CLAWMARKETER_USER_ID={uid}",
+        f"CLAWMARKETER_API_TOKEN={api_token}",
         "",
-        "# Meta Ads token (pre-filled from your connected account)",
-        f"META_ACCESS_TOKEN={meta_token}",
+        "# Telegram — agents send reports to this chat",
+        f"TELEGRAM_BOT_TOKEN={bot_token}",
+        f"TELEGRAM_CHAT_ID={chat_id}" if chat_id else "TELEGRAM_CHAT_ID=  # Connect Telegram in the app first",
         "",
-        f"GROQ_API_KEY={os.getenv('GROQ_API_KEY', '')}",
-        "",
-        "# Set this to the folder you want the data cleansing agent to scan",
+        "# Folder the data cleansing agent scans for CSV/Excel files",
         "DATA_DIR=~/Documents/data",
     ]
 
