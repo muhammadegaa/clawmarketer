@@ -1,17 +1,22 @@
 """
-ClawMarketer — Meta Ads Intelligence Agent (self-contained)
-============================================================
-Self-contained: no external package imports beyond pip dependencies.
-Install deps: pip install requests pandas matplotlib groq python-dotenv
+ClawMarketer — Meta Ads Intelligence Agent
+==========================================
+Thin client: all data and AI comes from the ClawMarketer server.
+Local work: clean, analyze, make charts, send to Telegram.
 
-Config: ~/.openclaw/clawmarketer.env
+Required env (~/.openclaw/clawmarketer.env):
+  CLAWMARKETER_URL
+  CLAWMARKETER_USER_ID
+  CLAWMARKETER_API_TOKEN
+  TELEGRAM_BOT_TOKEN
+  TELEGRAM_CHAT_ID
+  DATA_DIR   (optional — folder to scan for local CSV exports)
 """
 
 import os
 import sys
 import uuid
 import json
-import re
 import tempfile
 import requests
 import pandas as pd
@@ -26,16 +31,57 @@ if not os.path.exists(_env_path):
     _env_path = os.path.join(_skill_dir, "clawmarketer.env")
 load_dotenv(_env_path)
 
-CLAWMARKETER_URL     = os.getenv("CLAWMARKETER_URL", "https://clawmarketer.vercel.app")
-CLAWMARKETER_USER_ID = os.getenv("CLAWMARKETER_USER_ID", "")
-META_ACCESS_TOKEN    = os.getenv("META_ACCESS_TOKEN", "")
-META_AD_ACCOUNT_ID   = os.getenv("META_AD_ACCOUNT_ID", "")
-TELEGRAM_BOT_TOKEN   = os.getenv("TELEGRAM_BOT_TOKEN", "")
-TELEGRAM_CHAT_ID     = os.getenv("TELEGRAM_CHAT_ID", "")
-GROQ_API_KEY         = os.getenv("GROQ_API_KEY", "")
+CLAWMARKETER_URL      = os.getenv("CLAWMARKETER_URL", "https://clawmarketer.vercel.app")
+CLAWMARKETER_USER_ID  = os.getenv("CLAWMARKETER_USER_ID", "")
+CLAWMARKETER_API_TOKEN = os.getenv("CLAWMARKETER_API_TOKEN", "")
+TELEGRAM_BOT_TOKEN    = os.getenv("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_CHAT_ID      = os.getenv("TELEGRAM_CHAT_ID", "")
 
-API_VERSION = "v21.0"
-GROQ_MODEL  = "llama-3.3-70b-versatile"
+_HEADERS = {"Authorization": f"Bearer {CLAWMARKETER_API_TOKEN}"}
+
+# ── Server calls ──────────────────────────────────────────────────────────────
+
+def _fetch_insights(date_preset: str):
+    """Request campaign data from ClawMarketer. Server handles Meta API or sample fallback."""
+    try:
+        resp = requests.post(
+            f"{CLAWMARKETER_URL}/api/integrations/meta/insights",
+            headers=_HEADERS,
+            json={"uid": CLAWMARKETER_USER_ID, "date_preset": date_preset},
+            timeout=30,
+        )
+        if resp.status_code != 200:
+            print(f"  [insights] Server returned {resp.status_code}")
+            return pd.DataFrame(), "error"
+        body = resp.json()
+        df = pd.DataFrame(body["data"])
+        print(f"  [insights] {body['rows']} rows from {body['data_source']}")
+        return df, body["data_source"]
+    except Exception as e:
+        print(f"  [insights] Failed: {e}")
+        return pd.DataFrame(), "error"
+
+
+def _generate_report_via_api(analysis: dict) -> str:
+    """Request AI report from ClawMarketer. Server holds the Groq key."""
+    try:
+        resp = requests.post(
+            f"{CLAWMARKETER_URL}/api/ai/report",
+            headers=_HEADERS,
+            json={
+                "uid": CLAWMARKETER_USER_ID,
+                "analysis": {
+                    "overall":   analysis.get("overall", {}),
+                    "anomalies": analysis.get("anomalies", []),
+                },
+            },
+            timeout=45,
+        )
+        if resp.status_code != 200:
+            return f"AI report unavailable: server {resp.status_code}"
+        return resp.json().get("report", "")
+    except Exception as e:
+        return f"AI report unavailable: {e}"
 
 # ── Progress ──────────────────────────────────────────────────────────────────
 
@@ -45,7 +91,7 @@ def _push(run_id, stage, status, message, done=False, result=None, attachments=N
         "skill": "clawmarketer-meta", "stage": stage,
         "status": status, "message": message, "done": done,
     }
-    if result:     payload["result"]      = result
+    if result:      payload["result"]      = result
     if attachments: payload["attachments"] = attachments
     try:
         requests.post(f"{CLAWMARKETER_URL}/api/agent/push", json=payload, timeout=10)
@@ -78,85 +124,40 @@ def send_document(path, caption=""):
     with open(path, "rb") as f:
         return _tg_post("sendDocument", data={"chat_id": TELEGRAM_CHAT_ID, "caption": caption}, files={"document": f})
 
-# ── Meta API fetcher ──────────────────────────────────────────────────────────
+# ── Local CSV fallback ────────────────────────────────────────────────────────
 
-FIELDS = [
-    "campaign_name","objective","reach","impressions","clicks","spend",
-    "ctr","cpc","cpm","frequency","actions","cost_per_action_type",
-    "purchase_roas","date_start","date_stop",
-]
-
-CONVERSION_TYPES = {
-    "purchase","offsite_conversion.fb_pixel_purchase","app_install",
-    "lead","complete_registration","offsite_conversion.fb_pixel_lead",
-}
-
-def _extract_conversions(actions):
-    if not actions: return 0
-    return sum(float(a.get("value", 0)) for a in actions if a.get("action_type") in CONVERSION_TYPES)
-
-def _extract_cost_per_conversion(cpa):
-    if not cpa: return None
-    for a in cpa:
-        if a.get("action_type") in CONVERSION_TYPES:
-            return float(a.get("value", 0))
-    return None
-
-def _extract_roas(purchase_roas):
-    if not purchase_roas: return None
-    for r in purchase_roas:
-        if r.get("action_type") == "omni_purchase":
-            return float(r.get("value", 0))
-    return float(purchase_roas[0].get("value", 0)) if purchase_roas else None
-
-def _paginate(url, params):
-    results = []
-    while url:
-        resp = requests.get(url, params=params)
-        resp.raise_for_status()
-        data = resp.json()
-        if "error" in data:
-            raise RuntimeError(f"Meta API error: {data['error']['message']}")
-        results.extend(data.get("data", []))
-        url  = data.get("paging", {}).get("next")
-        params = {}
-    return results
-
-def fetch(date_preset="last_30d"):
-    acct = META_AD_ACCOUNT_ID
-    if not acct.startswith("act_"):
-        acct = f"act_{acct}"
-    url    = f"https://graph.facebook.com/{API_VERSION}/{acct}/insights"
-    params = {
-        "access_token": META_ACCESS_TOKEN,
-        "fields": ",".join(FIELDS),
-        "level": "campaign",
-        "limit": 500,
-        "date_preset": date_preset,
-    }
-    raw = _paginate(url, params)
-    if not raw:
-        return pd.DataFrame()
-    rows = []
-    for r in raw:
-        rows.append({
-            "Campaign name": r.get("campaign_name",""),
-            "Objective": r.get("objective",""),
-            "Reporting starts": r.get("date_start",""),
-            "Reporting ends": r.get("date_stop",""),
-            "Reach": r.get("reach", 0),
-            "Impressions": r.get("impressions", 0),
-            "Clicks (all)": r.get("clicks", 0),
-            "CTR (all)": r.get("ctr", 0),
-            "CPC (all)": r.get("cpc", 0),
-            "CPM (cost per 1,000 impressions)": r.get("cpm", 0),
-            "Amount spent (USD)": r.get("spend", 0),
-            "Results": _extract_conversions(r.get("actions")),
-            "Cost per result": _extract_cost_per_conversion(r.get("cost_per_action_type")),
-            "Purchase ROAS (return on ad spend)": _extract_roas(r.get("purchase_roas")),
-            "Frequency": r.get("frequency", 0),
-        })
-    return pd.DataFrame(rows)
+def _load_local_csv():
+    """Scan DATA_DIR for a Meta Ads-like CSV export (user's own file)."""
+    data_dir = os.path.expanduser(os.getenv("DATA_DIR", "~/Documents/data"))
+    if not os.path.isdir(data_dir):
+        return pd.DataFrame(), ""
+    ad_keywords = ["meta", "ads", "facebook", "campaign", "fb", "adset"]
+    ad_columns  = ["spend", "impressions", "campaign", "clicks", "ctr", "cpc", "cpm", "roas"]
+    candidates  = []
+    for fname in os.listdir(data_dir):
+        if fname.startswith("clean_") or not fname.lower().endswith(".csv"):
+            continue
+        path = os.path.join(data_dir, fname)
+        name_score = sum(1 for kw in ad_keywords if kw in fname.lower())
+        try:
+            df = pd.read_csv(path, nrows=3)
+            cols = " ".join(c.lower() for c in df.columns)
+            col_score = sum(1 for kw in ad_columns if kw in cols)
+            if col_score >= 2:
+                candidates.append((name_score + col_score, path, fname))
+        except Exception:
+            pass
+    if not candidates:
+        return pd.DataFrame(), ""
+    candidates.sort(reverse=True)
+    best_path, best_name = candidates[0][1], candidates[0][2]
+    try:
+        df = pd.read_csv(best_path)
+        print(f"  [data] Using local CSV: {best_name} ({len(df)} rows)")
+        return df, best_name
+    except Exception as e:
+        print(f"  [data] Failed to read {best_name}: {e}")
+        return pd.DataFrame(), ""
 
 # ── Data cleaner ──────────────────────────────────────────────────────────────
 
@@ -229,7 +230,6 @@ def analyze(df):
     if "campaign_name" in df.columns:
         overall["num_campaigns"] = df["campaign_name"].nunique()
 
-    # Anomalies
     flags = []
     ctr_col = "ctr_calc" if "ctr_calc" in summary.columns else ("ctr" if "ctr" in summary.columns else None)
     if ctr_col:
@@ -261,49 +261,46 @@ def make_charts(analysis):
     TEXT  = "#e2e8f0"; SUB = "#9ca3af"
 
     def _fig(title):
-        fig, ax = plt.subplots(figsize=(10,5))
+        fig, ax = plt.subplots(figsize=(10, 5))
         fig.patch.set_facecolor(DARK); ax.set_facecolor(CARD)
         ax.set_title(title, color=TEXT, fontsize=13, fontweight="bold", pad=14)
         ax.tick_params(colors=SUB, labelsize=9)
-        for sp in ["top","right"]: ax.spines[sp].set_visible(False)
-        for sp in ["bottom","left"]: ax.spines[sp].set_color("#2a2a2a")
+        for sp in ["top", "right"]: ax.spines[sp].set_visible(False)
+        for sp in ["bottom", "left"]: ax.spines[sp].set_color("#2a2a2a")
         return fig, ax
 
-    def _short(n): return n[:18]+"…" if len(n)>18 else n
+    def _short(n): return n[:18] + "…" if len(n) > 18 else n
 
-    # Spend chart
     if "spend" in summary.columns:
-        df = summary.nlargest(8,"spend")[["campaign_name","spend"]].copy()
+        df = summary.nlargest(8, "spend")[["campaign_name", "spend"]].copy()
         df["label"] = df["campaign_name"].apply(_short)
         fig, ax = _fig("Spend by Campaign (USD)")
         bars = ax.barh(df["label"], df["spend"], color=INDIGO, height=0.6)
         ax.bar_label(bars, labels=[f"${v:,.0f}" for v in df["spend"]], color=SUB, fontsize=8, padding=4)
-        ax.xaxis.set_major_formatter(mticker.FuncFormatter(lambda x,_: f"${x:,.0f}"))
+        ax.xaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f"${x:,.0f}"))
         ax.invert_yaxis(); ax.tick_params(axis="y", colors=TEXT); fig.tight_layout()
         path = os.path.join(out_dir, "chart_spend.png")
         fig.savefig(path, dpi=130, bbox_inches="tight", facecolor=DARK); plt.close(fig); charts.append(path)
 
-    # CTR chart
     ctr_col = "ctr_calc" if "ctr_calc" in summary.columns else ("ctr" if "ctr" in summary.columns else None)
     if ctr_col:
         df = summary.copy(); df["label"] = df["campaign_name"].apply(_short)
         df = df.sort_values(ctr_col, ascending=True).tail(8)
         fig, ax = _fig("CTR by Campaign (%)")
-        colors = [GREEN if v>=2 else YELLOW if v>=1 else RED for v in df[ctr_col]]
+        colors = [GREEN if v >= 2 else YELLOW if v >= 1 else RED for v in df[ctr_col]]
         bars = ax.barh(df["label"], df[ctr_col], color=colors, height=0.6)
         ax.bar_label(bars, labels=[f"{v:.2f}%" for v in df[ctr_col]], color=SUB, fontsize=8, padding=4)
         ax.tick_params(axis="y", colors=TEXT); fig.tight_layout()
         path = os.path.join(out_dir, "chart_ctr.png")
         fig.savefig(path, dpi=130, bbox_inches="tight", facecolor=DARK); plt.close(fig); charts.append(path)
 
-    # ROAS chart
     if "roas" in summary.columns:
-        df = summary[summary["roas"].notna() & (summary["roas"]>0)].copy()
+        df = summary[summary["roas"].notna() & (summary["roas"] > 0)].copy()
         if not df.empty:
             df["label"] = df["campaign_name"].apply(_short)
             df = df.sort_values("roas", ascending=True)
             fig, ax = _fig("ROAS by Campaign")
-            colors = [GREEN if v>=2 else YELLOW if v>=1 else RED for v in df["roas"]]
+            colors = [GREEN if v >= 2 else YELLOW if v >= 1 else RED for v in df["roas"]]
             bars = ax.barh(df["label"], df["roas"], color=colors, height=0.6)
             ax.bar_label(bars, labels=[f"{v:.2f}x" for v in df["roas"]], color=SUB, fontsize=8, padding=4)
             ax.tick_params(axis="y", colors=TEXT); fig.tight_layout()
@@ -314,77 +311,51 @@ def make_charts(analysis):
     summary.to_csv(csv_path, index=False)
     return charts, csv_path
 
-# ── AI report ─────────────────────────────────────────────────────────────────
-
-def generate_report(analysis):
-    if not GROQ_API_KEY:
-        return ""
-    try:
-        from groq import Groq
-        o  = analysis.get("overall", {})
-        tb = {}  # top/bottom omitted for brevity — summary has it all
-        an = analysis.get("anomalies", [])
-        prompt = f"""You are a senior digital marketing analyst. Based on the Meta Ads performance data below, write a clear, actionable report for a business owner.
-
-## Overall Metrics
-{json.dumps(o, indent=2)}
-
-## Anomalies Detected
-{json.dumps(an, indent=2)}
-
-Write a report with these sections:
-1. **Executive Summary** (3-4 sentences)
-2. **What's Working** (specific metrics with numbers)
-3. **What Needs Attention** (specific problems)
-4. **Recommended Actions** (3-5 concrete next steps)
-
-Be direct. Use the actual numbers. No fluff."""
-        client = Groq(api_key=GROQ_API_KEY)
-        resp = client.chat.completions.create(
-            model=GROQ_MODEL,
-            messages=[{"role":"user","content":prompt}],
-            temperature=0.4,
-        )
-        return resp.choices[0].message.content
-    except Exception as e:
-        return f"AI report unavailable: {e}"
-
 # ── Main pipeline ─────────────────────────────────────────────────────────────
 
 def run(date_preset="last_30d"):
     run_id = datetime.utcnow().strftime("%Y%m%d_%H%M%S") + "_" + uuid.uuid4().hex[:6]
     print(f"\n[ClawMarketer] Meta Ads Agent — run {run_id}")
 
-    _push(run_id, 1, "running", f"Fetching Meta Ads data ({date_preset.replace('_',' ')})...")
-    try:
-        df_raw = fetch(date_preset)
-    except Exception as e:
-        msg = f"Fetch failed: {e}"
-        _push(run_id, 1, "error", msg)
-        return f"❌ {msg}"
+    # ── Step 1: Fetch data from ClawMarketer ──────────────────────────────────
+    _push(run_id, 1, "running", "Fetching data from ClawMarketer...")
 
+    df_raw, data_source = _fetch_insights(date_preset)
+
+    # Local CSV as secondary fallback (user's own ad export files)
+    if df_raw.empty:
+        df_raw, csv_name = _load_local_csv()
+        if not df_raw.empty:
+            data_source = f"local file: {csv_name}"
+
+    if df_raw.empty:
+        _push(run_id, 1, "error", "Could not fetch data — check ClawMarketer connection")
+        return "❌ Could not fetch data"
+
+    _push(run_id, 1, "done", f"Loaded {len(df_raw)} rows ({data_source})")
+
+    # ── Step 2: Clean ─────────────────────────────────────────────────────────
     _push(run_id, 2, "running", f"Cleaning {len(df_raw)} rows...")
     try:
         df, clean_stats = clean(df_raw)
     except Exception as e:
-        msg = f"Clean failed: {e}"
-        _push(run_id, 2, "error", msg)
-        return f"❌ {msg}"
+        _push(run_id, 2, "error", f"Clean failed: {e}")
+        return f"❌ Clean failed: {e}"
+    _push(run_id, 2, "done", f"Cleaned — {clean_stats['clean_rows']} campaigns ready")
 
+    # ── Step 3: Analyze + Charts ──────────────────────────────────────────────
     _push(run_id, 3, "running", f"Analyzing {clean_stats['clean_rows']} campaigns...")
     try:
-        results      = analyze(df)
+        results          = analyze(df)
         charts, csv_path = make_charts(results)
     except Exception as e:
-        msg = f"Analysis failed: {e}"
-        _push(run_id, 3, "error", msg)
-        return f"❌ {msg}"
+        _push(run_id, 3, "error", f"Analysis failed: {e}")
+        return f"❌ Analysis failed: {e}"
+    _push(run_id, 3, "done", f"{len(charts)} charts generated, {len(results.get('anomalies', []))} anomalies found")
 
+    # ── Step 4: AI Report (via server) + Telegram ─────────────────────────────
     _push(run_id, 4, "running", "Generating AI report...")
-    try:
-        report_text = generate_report(results)
-    except Exception as e:
-        report_text = f"AI report unavailable: {e}"
+    report_text = _generate_report_via_api(results)
 
     o = results.get("overall", {})
     anomaly_lines = ""
@@ -392,14 +363,14 @@ def run(date_preset="last_30d"):
         anomaly_lines = "\n\n⚠️ *Anomalies detected:*\n" + "\n".join(f"• {a}" for a in results["anomalies"][:3])
 
     summary_msg = (
-        f"✅ *Meta Ads Report — {date_preset.replace('_',' ').title()}*\n\n"
-        f"💰 Total Spend: *${o.get('total_spend',0):,.2f}*\n"
-        f"👁 Impressions: *{o.get('total_impressions',0):,}*\n"
-        f"🖱 Clicks: *{o.get('total_clicks',0):,}*\n"
-        f"📊 CTR: *{o.get('overall_ctr',0):.2f}%*\n"
-        f"💵 CPC: *${o.get('overall_cpc',0):.2f}*\n"
-        f"🎯 ROAS: *{o.get('avg_roas',0):.2f}x*\n"
-        f"📢 Campaigns: *{o.get('num_campaigns',0)}*"
+        f"✅ *Meta Ads Report — {date_preset.replace('_', ' ').title()}*\n\n"
+        f"💰 Total Spend: *${o.get('total_spend', 0):,.2f}*\n"
+        f"👁 Impressions: *{o.get('total_impressions', 0):,}*\n"
+        f"🖱 Clicks: *{o.get('total_clicks', 0):,}*\n"
+        f"📊 CTR: *{o.get('overall_ctr', 0):.2f}%*\n"
+        f"💵 CPC: *${o.get('overall_cpc', 0):.2f}*\n"
+        f"🎯 ROAS: *{o.get('avg_roas', 0):.2f}x*\n"
+        f"📢 Campaigns: *{o.get('num_campaigns', 0)}*"
         f"{anomaly_lines}\n\n"
         f"📋 Full report → {CLAWMARKETER_URL}"
     )
@@ -433,11 +404,11 @@ def run(date_preset="last_30d"):
 def handle(message: str) -> str:
     msg = message.lower()
     preset_map = {
-        "last 7":"last_7d","last week":"last_7d","last 14":"last_14d",
-        "last month":"last_month","this month":"this_month","last quarter":"last_quarter",
+        "last 7": "last_7d", "last week": "last_7d", "last 14": "last_14d",
+        "last month": "last_month", "this month": "this_month", "last quarter": "last_quarter",
     }
-    preset = next((v for k,v in preset_map.items() if k in msg), "last_30d")
-    send_message(f"🚀 Starting Meta Ads analysis ({preset.replace('_',' ')})...\nCheck your dashboard for live progress.")
+    preset = next((v for k, v in preset_map.items() if k in msg), "last_30d")
+    send_message(f"🚀 Starting Meta Ads analysis ({preset.replace('_', ' ')})...\nCheck your dashboard for live progress.")
     return run(date_preset=preset)
 
 
