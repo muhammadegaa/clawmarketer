@@ -27,14 +27,14 @@ if not os.path.exists(_env_path):
     _env_path = os.path.join(_skill_dir, "clawmarketer.env")
 load_dotenv(_env_path)
 
-CLAWMARKETER_URL     = os.getenv("CLAWMARKETER_URL", "https://clawmarketer.vercel.app")
-CLAWMARKETER_USER_ID = os.getenv("CLAWMARKETER_USER_ID", "")
-TELEGRAM_BOT_TOKEN   = os.getenv("TELEGRAM_BOT_TOKEN", "")
-TELEGRAM_CHAT_ID     = os.getenv("TELEGRAM_CHAT_ID", "")
-GROQ_API_KEY         = os.getenv("GROQ_API_KEY", "")
-DATA_DIR             = os.path.expanduser(os.getenv("DATA_DIR", "~/Documents/data"))
+CLAWMARKETER_URL       = os.getenv("CLAWMARKETER_URL", "https://clawmarketer.vercel.app")
+CLAWMARKETER_USER_ID   = os.getenv("CLAWMARKETER_USER_ID", "")
+CLAWMARKETER_API_TOKEN = os.getenv("CLAWMARKETER_API_TOKEN", "")
+TELEGRAM_BOT_TOKEN     = os.getenv("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_CHAT_ID       = os.getenv("TELEGRAM_CHAT_ID", "")
+DATA_DIR               = os.path.expanduser(os.getenv("DATA_DIR", "~/Documents/data"))
 
-GROQ_MODEL = "llama-3.3-70b-versatile"
+_HEADERS = {"Authorization": f"Bearer {CLAWMARKETER_API_TOKEN}"}
 
 # ── Progress ──────────────────────────────────────────────────────────────────
 
@@ -109,27 +109,27 @@ def _clean_file(path):
         "columns":       len(df.columns),
     }
 
-# ── AI summary ────────────────────────────────────────────────────────────────
+# ── AI summary (via ClawMarketer server) ─────────────────────────────────────
 
 def _ai_summary(file_summaries):
-    if not GROQ_API_KEY:
-        return ""
+    """Request AI summary from ClawMarketer. No Groq key needed locally."""
+    prompt = (
+        "You are a data analyst. A data cleaning agent just processed these files:\n\n"
+        f"{json.dumps(file_summaries, indent=2)}\n\n"
+        "Write a brief 3-4 sentence summary for a business owner covering: "
+        "what files were cleaned, how many rows were removed and why, "
+        "and whether the data quality looks good. Be direct."
+    )
     try:
-        from groq import Groq
-        client = Groq(api_key=GROQ_API_KEY)
-        prompt = (
-            "You are a data analyst. A data cleaning agent just processed these files:\n\n"
-            f"{json.dumps(file_summaries, indent=2)}\n\n"
-            "Write a brief 3-4 sentence summary for a business owner covering: "
-            "what files were cleaned, how many rows were removed and why, "
-            "and whether the data quality looks good. Be direct."
+        resp = requests.post(
+            f"{CLAWMARKETER_URL}/api/ai/complete",
+            headers=_HEADERS,
+            json={"uid": CLAWMARKETER_USER_ID, "prompt": prompt, "temperature": 0.3, "max_tokens": 512},
+            timeout=30,
         )
-        resp = client.chat.completions.create(
-            model=GROQ_MODEL,
-            messages=[{"role":"user","content":prompt}],
-            temperature=0.3,
-        )
-        return resp.choices[0].message.content
+        if resp.status_code == 200:
+            return resp.json().get("text", "")
+        return ""
     except Exception as e:
         return f"AI summary unavailable: {e}"
 
