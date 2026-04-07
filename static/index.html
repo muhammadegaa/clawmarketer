@@ -641,7 +641,7 @@
               <span style="font-size:11px;color:#4ade80;font-weight:500;">Active</span>
             </div>
           </div>
-          <p style="font-size:12px;color:var(--sub);margin:0 0 14px;">Used by your local OpenClaw agents to pull credentials automatically — no need to paste tokens into config files.</p>
+          <p style="font-size:12px;color:var(--sub);margin:0 0 14px;">Used by OpenClaw to authenticate. Copy it for the setup command below.</p>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             <input id="api-token-input" type="password" readonly
               style="flex:1;min-width:0;font-size:12px;font-family:monospace;padding:8px 12px;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;color:var(--text);outline:none;"
@@ -650,9 +650,17 @@
             <button class="btn btn-ghost btn-sm" onclick="copyApiToken()">Copy</button>
             <button class="btn btn-ghost btn-sm" onclick="regenerateApiToken()" style="color:#f87171;border-color:rgba(248,113,113,.3);">Rotate</button>
           </div>
-          <div style="display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap;">
-            <button class="btn btn-primary btn-sm" onclick="downloadEnvFile()">Download clawmarketer.env</button>
-            <p style="font-size:11px;color:var(--sub);margin:0;">Save to <code style="background:var(--bg2);padding:1px 4px;border-radius:3px;">~/.openclaw/clawmarketer.env</code> on your machine.</p>
+          <!-- Install command with token pre-filled -->
+          <div style="margin-top:14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;">
+            <p style="font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;">Install command</p>
+            <div style="font-family:monospace;font-size:11px;line-height:1.7;word-break:break-all;">
+              <span style="color:var(--sub);">pip install openclaw</span><br>
+              <span style="color:#4ade80;">openclaw init </span><span id="install-cmd-token" style="color:#4ade80;opacity:.5;">loading...</span>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+              <button class="btn btn-primary btn-sm" onclick="copyInstallCmd()">Copy full command</button>
+              <button class="btn btn-ghost btn-sm" onclick="openSetupGuide()">View guide</button>
+            </div>
           </div>
         </div>
       </div>
@@ -666,60 +674,50 @@
 <div id="modal-setup-guide" class="hidden" style="position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);padding:20px;">
   <div class="card" style="max-width:560px;width:100%;padding:28px;position:relative;max-height:90vh;overflow-y:auto;">
     <button onclick="closeSetupGuide()" style="position:absolute;top:14px;right:16px;background:none;border:none;color:var(--sub);font-size:18px;cursor:pointer;line-height:1;">✕</button>
-    <h2 style="font-size:17px;font-weight:700;margin-bottom:6px;">Set up your local agent</h2>
-    <p style="font-size:13px;color:var(--sub);margin-bottom:22px;">Run these steps once on your machine. Takes about 5 minutes.</p>
+    <h2 style="font-size:17px;font-weight:700;margin-bottom:6px;">Install OpenClaw</h2>
+    <p style="font-size:13px;color:var(--sub);margin-bottom:22px;">One command. It handles config, scheduling, and connecting to your accounts.</p>
 
-    <div style="display:flex;flex-direction:column;gap:18px;">
+    <div style="display:flex;flex-direction:column;gap:16px;">
 
       <div style="display:flex;gap:14px;align-items:flex-start;">
         <div style="width:26px;height:26px;border-radius:50%;background:var(--indigo);color:#fff;font-size:12px;font-weight:700;flex-shrink:0;display:flex;align-items:center;justify-content:center;">1</div>
-        <div>
-          <p style="font-size:13px;font-weight:600;margin-bottom:4px;">Install OpenClaw</p>
-          <p style="font-size:12px;color:var(--sub);margin-bottom:8px;">OpenClaw runs AI agents locally and connects them to your Telegram bot.</p>
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-family:monospace;font-size:12px;display:flex;justify-content:space-between;align-items:center;">
-            <span id="sgcmd1" style="color:#a5b4fc;">curl -sSL https://openclaw.dev/install.sh | bash</span>
-            <button class="btn btn-ghost btn-sm" onclick="copySGCmd('sgcmd1')" style="margin-left:10px;flex-shrink:0;">Copy</button>
+        <div style="flex:1;min-width:0;">
+          <p style="font-size:13px;font-weight:600;margin-bottom:4px;">Install the package</p>
+          <p style="font-size:12px;color:var(--sub);margin-bottom:8px;">Requires Python 3.9+.</p>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-family:monospace;font-size:12px;display:flex;justify-content:space-between;align-items:center;gap:10px;">
+            <span id="sgcmd1" style="color:#a5b4fc;">pip install openclaw</span>
+            <button class="btn btn-ghost btn-sm" onclick="copySGCmd('sgcmd1')" style="flex-shrink:0;">Copy</button>
           </div>
         </div>
       </div>
 
       <div style="display:flex;gap:14px;align-items:flex-start;">
         <div style="width:26px;height:26px;border-radius:50%;background:var(--indigo);color:#fff;font-size:12px;font-weight:700;flex-shrink:0;display:flex;align-items:center;justify-content:center;">2</div>
-        <div>
-          <p style="font-size:13px;font-weight:600;margin-bottom:4px;">Download your config file</p>
-          <p style="font-size:12px;color:var(--sub);margin-bottom:8px;">Go to <strong style="color:var(--text);">Integrations → Download .env</strong> (or your profile page) and save it to:</p>
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-family:monospace;font-size:12px;">
-            <span style="color:#4ade80;">~/.openclaw/clawmarketer.env</span>
+        <div style="flex:1;min-width:0;">
+          <p style="font-size:13px;font-weight:600;margin-bottom:4px;">Run setup with your token</p>
+          <p style="font-size:12px;color:var(--sub);margin-bottom:8px;">Copy your token from <strong style="color:var(--text);">API Token → Copy</strong> below, then run:</p>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-family:monospace;font-size:11px;display:flex;justify-content:space-between;align-items:center;gap:10px;">
+            <span id="sgcmd-init" style="color:#4ade80;word-break:break-all;">openclaw init <span id="sg-token-fill" style="opacity:.45;">YOUR_TOKEN</span></span>
+            <button class="btn btn-ghost btn-sm" onclick="copySGInitCmd()" style="flex-shrink:0;">Copy</button>
           </div>
         </div>
       </div>
 
-      <div style="display:flex;gap:14px;align-items:flex-start;">
-        <div style="width:26px;height:26px;border-radius:50%;background:var(--indigo);color:#fff;font-size:12px;font-weight:700;flex-shrink:0;display:flex;align-items:center;justify-content:center;">3</div>
-        <div>
-          <p style="font-size:13px;font-weight:600;margin-bottom:4px;">Install ClawMarketer skills</p>
-          <p style="font-size:12px;color:var(--sub);margin-bottom:8px;">Install the Meta Ads skill (and optionally the Data Cleaner):</p>
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-family:monospace;font-size:12px;display:flex;justify-content:space-between;align-items:center;">
-            <span id="sgcmd2" style="color:#a5b4fc;">openclaw skill install clawmarketer-meta</span>
-            <button class="btn btn-ghost btn-sm" onclick="copySGCmd('sgcmd2')" style="margin-left:10px;flex-shrink:0;">Copy</button>
-          </div>
-        </div>
-      </div>
-
-      <div style="display:flex;gap:14px;align-items:flex-start;">
-        <div style="width:26px;height:26px;border-radius:50%;background:var(--indigo);color:#fff;font-size:12px;font-weight:700;flex-shrink:0;display:flex;align-items:center;justify-content:center;">4</div>
-        <div>
-          <p style="font-size:13px;font-weight:600;margin-bottom:4px;">Start OpenClaw</p>
-          <p style="font-size:12px;color:var(--sub);margin-bottom:8px;">Then send a message to your Telegram bot to trigger your first run:</p>
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-family:monospace;font-size:12px;color:#fbbf24;">analyze my ads</div>
+      <div style="background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.15);border-radius:8px;padding:14px 16px;">
+        <p style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text);">What it does in one go</p>
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          <div style="font-size:12px;color:var(--sub);display:flex;gap:8px;"><span style="color:#4ade80;flex-shrink:0;">✓</span>Verifies your token and shows what accounts are connected</div>
+          <div style="font-size:12px;color:var(--sub);display:flex;gap:8px;"><span style="color:#4ade80;flex-shrink:0;">✓</span>Saves config to ~/.openclaw/ — no .env file to manage</div>
+          <div style="font-size:12px;color:var(--sub);display:flex;gap:8px;"><span style="color:#4ade80;flex-shrink:0;">✓</span>Registers a daily schedule (launchctl on Mac, cron on Linux)</div>
+          <div style="font-size:12px;color:var(--sub);display:flex;gap:8px;"><span style="color:#4ade80;flex-shrink:0;">✓</span>First report arrives tomorrow morning</div>
         </div>
       </div>
 
     </div>
 
-    <div style="margin-top:22px;padding-top:18px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-      <p style="font-size:12px;color:var(--sub);">Questions? Check the <a href="https://openclaw.dev/docs" target="_blank" style="color:var(--indigo);">OpenClaw docs</a>.</p>
-      <button class="btn btn-primary btn-sm" onclick="closeSetupGuide();toggleChecklistItem(1);">Mark as done</button>
+    <div style="margin-top:22px;padding-top:18px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+      <p style="font-size:12px;color:var(--sub);">Run <code style="background:var(--bg2);padding:1px 5px;border-radius:3px;font-size:11px;">openclaw status</code> to verify.</p>
+      <button class="btn btn-primary btn-sm" onclick="closeSetupGuide();toggleChecklistItem(1);">Got it</button>
     </div>
   </div>
 </div>
@@ -1328,10 +1326,29 @@ async function loadApiToken() {
     _apiToken = data.token || '';
     const input = document.getElementById('api-token-input');
     if (input) input.value = _apiToken;
+    _updateInstallCmd(_apiToken);
   } catch(e) {
     console.warn('loadApiToken failed', e);
   }
 }
+
+function _updateInstallCmd(token) {
+  const els = ['install-cmd-token', 'sg-token-fill'];
+  els.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = token || 'YOUR_TOKEN'; el.style.opacity = token ? '1' : '.45'; }
+  });
+}
+
+window.copyInstallCmd = function() {
+  const cmd = `pip install openclaw\nopenclaw init ${_apiToken}`;
+  navigator.clipboard.writeText(cmd).then(() => toast('Install command copied', 'success'));
+};
+
+window.copySGInitCmd = function() {
+  const cmd = `openclaw init ${_apiToken || 'YOUR_TOKEN'}`;
+  navigator.clipboard.writeText(cmd).then(() => toast('Copied', 'success'));
+};
 
 window.toggleApiTokenVisibility = function() {
   const input = document.getElementById('api-token-input');
@@ -1360,7 +1377,8 @@ window.regenerateApiToken = async function() {
     if (input) { input.value = _apiToken; input.type = 'text'; }
     const btn = document.getElementById('api-token-toggle');
     if (btn) btn.textContent = 'Hide';
-    toast('API token rotated — re-download your clawmarketer.env', 'success');
+    _updateInstallCmd(_apiToken);
+    toast('Token rotated — copy the new install command below', 'success');
   } catch(e) {
     toast('Failed to rotate token', 'error');
   }
