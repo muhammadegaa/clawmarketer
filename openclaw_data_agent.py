@@ -52,7 +52,7 @@ if _repo_dir not in sys.path:
 CLAWMARKETER_URL     = os.getenv("CLAWMARKETER_URL", "https://clawmarketer.vercel.app")
 CLAWMARKETER_USER_ID = os.getenv("CLAWMARKETER_USER_ID", "")
 GROQ_API_KEY         = os.getenv("GROQ_API_KEY", "")
-DATA_DIR             = os.path.expanduser(os.getenv("DATA_DIR", "~/Documents/data"))
+DATA_DIR             = os.path.expanduser(os.getenv("DATA_DIR", "~/Documents/sample-data"))
 
 
 # ── Progress ──────────────────────────────────────────────────────────────────
