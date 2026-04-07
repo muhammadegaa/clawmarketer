@@ -270,7 +270,6 @@ def handle(message: str) -> str:
             if os.path.isdir(expanded):
                 data_dir = expanded
 
-    send_message("🧹 Starting data cleaning agent...\nCheck your dashboard for live progress.")
     return run(data_dir=data_dir)
 
 
