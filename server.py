@@ -584,11 +584,14 @@ def clear_demo(uid: str = ""):
 # ── Credentials API ───────────────────────────────────────────────────────────
 
 def _get_or_create_api_token(uid: str) -> str:
-    """Return the existing API token for uid, or generate + store a new one."""
+    """Return the API token for uid (new oc_ format), migrating old sk_cm_ tokens."""
     doc = _read_from_firestore(uid, "meta", "profile") or {}
-    if doc.get("api_token"):
-        return doc["api_token"]
-    token = "sk_cm_" + secrets.token_hex(32)
+    existing = doc.get("api_token", "")
+    # Return if already new format
+    if existing.startswith("oc_"):
+        return existing
+    # Generate new format token (uid embedded so CLI can self-identify)
+    token = f"oc_{uid}_{secrets.token_hex(24)}"
     _write_to_firestore(uid, "meta", "profile", {"api_token": token})
     return token
 
@@ -616,7 +619,7 @@ def regenerate_api_token(uid: str = ""):
     """Regenerate (rotate) the API token for this user."""
     if not uid:
         raise HTTPException(status_code=400, detail="Missing uid")
-    token = "sk_cm_" + secrets.token_hex(32)
+    token = f"oc_{uid}_{secrets.token_hex(24)}"
     _write_to_firestore(uid, "meta", "profile", {"api_token": token})
     return {"token": token}
 
@@ -653,6 +656,61 @@ def get_credentials(uid: str = "", request: Request = None):
             "bot_token": os.getenv("TELEGRAM_BOT_TOKEN", ""),
             "chat_id":   "",   # user-specific, not server-level
         },
+    }
+
+
+# ── CLI setup endpoint ────────────────────────────────────────────────────────
+
+@app.get("/api/cli/setup")
+def cli_setup(request: Request):
+    """Called by `openclaw init TOKEN`.
+    Validates the bearer token, returns connection status so the CLI can
+    display what's connected and configure itself without any extra input."""
+    bearer = _validate_bearer(request)
+    if not bearer:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+
+    # New token format: oc_{uid}_{hex}
+    if not bearer.startswith("oc_"):
+        raise HTTPException(
+            status_code=400,
+            detail="Outdated token format. Click Rotate in the dashboard to get a new token."
+        )
+    parts = bearer.split("_", 2)
+    if len(parts) < 3:
+        raise HTTPException(status_code=400, detail="Invalid token")
+    uid = parts[1]
+
+    # Validate token matches stored value
+    doc = _read_from_firestore(uid, "meta", "profile") or {}
+    if doc.get("api_token", "") != bearer:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    # Meta connection status
+    meta_doc      = _read_from_firestore(uid, "integrations", "meta") or {}
+    meta_connected = bool(meta_doc.get("access_token"))
+    meta_campaigns = 0
+    if meta_connected:
+        try:
+            df = fetcher.fetch(
+                access_token=meta_doc["access_token"],
+                ad_account_id=meta_doc.get("account_id", ""),
+                date_preset="last_30d",
+            )
+            meta_campaigns = int(df["campaign_name"].nunique()) if not df.empty else 0
+        except Exception:
+            pass
+
+    # Telegram connection status
+    telegram_connected = bool(doc.get("telegram_chat_id"))
+    telegram_handle    = doc.get("telegram_username", "")
+
+    return {
+        "uid":                uid,
+        "meta_connected":     meta_connected,
+        "meta_campaigns":     meta_campaigns,
+        "telegram_connected": telegram_connected,
+        "telegram_handle":    telegram_handle,
     }
 
 
